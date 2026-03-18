@@ -2114,6 +2114,7 @@ def launch_team(
 
     from clawteam.spawn import get_backend
     from clawteam.spawn.prompt import build_agent_prompt
+    from clawteam.events import EventStore, EventTypes
     from clawteam.team.manager import TeamManager
     from clawteam.team.tasks import TaskStore
     from clawteam.templates import TemplateDef, load_template, render_task
@@ -2129,6 +2130,7 @@ def launch_team(
     t_name = team_name or f"{tmpl.name}-{uuid.uuid4().hex[:6]}"
     be_name = backend or tmpl.backend
     cmd = command_override or tmpl.command
+    run_id = uuid.uuid4().hex[:12]
 
     # 3. Create team
     leader_id = uuid.uuid4().hex[:12]
@@ -2143,8 +2145,26 @@ def launch_team(
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
+    event_store = EventStore(t_name)
+    event_store.emit(
+        EventTypes.RUN_CREATED,
+        run_id=run_id,
+        payload={
+            "template": tmpl.name,
+            "goal": goal,
+            "backend": be_name,
+            "workspace_enabled": workspace,
+            "command": cmd,
+        },
+    )
 
     # 4. Add members
+    event_store.emit(
+        EventTypes.STAGE_STARTED,
+        run_id=run_id,
+        stage_id="members.add",
+        payload={"member_count": len(tmpl.agents) + 1},
+    )
     agent_ids: dict[str, str] = {tmpl.leader.name: leader_id}
     for agent in tmpl.agents:
         aid = uuid.uuid4().hex[:12]
@@ -2156,8 +2176,20 @@ def launch_team(
             agent_type=agent.type,
             user=_os.environ.get("CLAWTEAM_USER", ""),
         )
+    event_store.emit(
+        EventTypes.STAGE_COMPLETED,
+        run_id=run_id,
+        stage_id="members.add",
+        payload={"member_count": len(agent_ids)},
+    )
 
     # 5. Create tasks
+    event_store.emit(
+        EventTypes.STAGE_STARTED,
+        run_id=run_id,
+        stage_id="tasks.seed",
+        payload={"task_count": len(tmpl.tasks)},
+    )
     ts = TaskStore(t_name)
     for task_def in tmpl.tasks:
         ts.create(
@@ -2165,6 +2197,12 @@ def launch_team(
             description=task_def.description,
             owner=task_def.owner,
         )
+    event_store.emit(
+        EventTypes.STAGE_COMPLETED,
+        run_id=run_id,
+        stage_id="tasks.seed",
+        payload={"task_count": len(tmpl.tasks)},
+    )
 
     # 6. Get backend
     try:
@@ -2185,6 +2223,12 @@ def launch_team(
     # 8. Spawn all agents (leader first, then workers)
     all_agents = [tmpl.leader] + list(tmpl.agents)
     spawned: list[dict[str, str]] = []
+    event_store.emit(
+        EventTypes.STAGE_STARTED,
+        run_id=run_id,
+        stage_id="agents.spawn",
+        payload={"agent_count": len(all_agents)},
+    )
 
     for agent in all_agents:
         a_id = agent_ids[agent.name]
@@ -2229,8 +2273,18 @@ def launch_team(
             team_name=t_name,
             prompt=prompt,
             cwd=cwd,
+            env={
+                "CLAWTEAM_RUN_ID": run_id,
+                "CLAWTEAM_STAGE_ID": "agents.spawn",
+            },
         )
         spawned.append({"name": agent.name, "id": a_id, "type": agent.type, "result": result})
+    event_store.emit(
+        EventTypes.STAGE_COMPLETED,
+        run_id=run_id,
+        stage_id="agents.spawn",
+        payload={"agent_count": len(spawned)},
+    )
 
     # 9. Output summary
     out = {
@@ -2238,6 +2292,7 @@ def launch_team(
         "team": t_name,
         "template": tmpl.name,
         "backend": be_name,
+        "runId": run_id,
         "agents": [{"name": s["name"], "id": s["id"], "type": s["type"]} for s in spawned],
     }
 

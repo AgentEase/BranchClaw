@@ -6,6 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from clawteam.events import EventStore, EventTypes
 from clawteam.team.models import get_data_dir
 
 
@@ -20,6 +21,8 @@ def register_agent(
     tmux_target: str = "",
     pid: int = 0,
     command: list[str] | None = None,
+    agent_id: str = "",
+    agent_type: str = "",
 ) -> None:
     """Record spawn info for an agent (atomic write)."""
     path = _registry_path(team_name)
@@ -29,8 +32,24 @@ def register_agent(
         "tmux_target": tmux_target,
         "pid": pid,
         "command": command or [],
+        "agent_id": agent_id,
+        "agent_type": agent_type,
+        "last_status": "spawned",
     }
     _save(path, registry)
+    EventStore(team_name).emit(
+        EventTypes.WORKER_SPAWNED,
+        worker_name=agent_name,
+        correlation_id=agent_id,
+        payload={
+            "backend": backend,
+            "tmux_target": tmux_target,
+            "pid": pid,
+            "command": command or [],
+            "agent_id": agent_id,
+            "agent_type": agent_type,
+        },
+    )
 
 
 def get_registry(team_name: str) -> dict[str, dict]:
@@ -57,9 +76,12 @@ def is_agent_alive(team_name: str, agent_name: str) -> bool | None:
             pid = info.get("pid", 0)
             if pid:
                 return _pid_alive(pid)
+        _record_liveness(team_name, agent_name, info, alive)
         return alive
     elif backend == "subprocess":
-        return _pid_alive(info.get("pid", 0))
+        alive = _pid_alive(info.get("pid", 0))
+        _record_liveness(team_name, agent_name, info, alive)
+        return alive
     return None
 
 
@@ -135,3 +157,34 @@ def _save(path: Path, data: dict) -> None:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+
+
+def _record_liveness(team_name: str, agent_name: str, info: dict, alive: bool | None) -> None:
+    if alive is None:
+        return
+    next_status = "alive" if alive else "exited"
+    if info.get("last_status") == next_status:
+        return
+
+    path = _registry_path(team_name)
+    registry = _load(path)
+    current = registry.get(agent_name)
+    if not current:
+        return
+    current["last_status"] = next_status
+    registry[agent_name] = current
+    _save(path, registry)
+
+    EventStore(team_name).emit(
+        EventTypes.WORKER_HEARTBEAT if alive else EventTypes.WORKER_EXITED,
+        worker_name=agent_name,
+        correlation_id=current.get("agent_id", ""),
+        payload={
+            "backend": current.get("backend", ""),
+            "pid": current.get("pid", 0),
+            "tmux_target": current.get("tmux_target", ""),
+            "command": current.get("command", []),
+            "agent_id": current.get("agent_id", ""),
+            "agent_type": current.get("agent_type", ""),
+        },
+    )

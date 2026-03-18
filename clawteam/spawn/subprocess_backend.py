@@ -93,6 +93,8 @@ class SubprocessBackend(SpawnBackend):
             backend="subprocess",
             pid=process.pid,
             command=list(command),
+            agent_id=agent_id,
+            agent_type=agent_type,
         )
 
         return f"Agent '{agent_name}' spawned as subprocess (pid={process.pid})"

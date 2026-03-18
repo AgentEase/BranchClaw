@@ -6,6 +6,7 @@ import json
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from clawteam.board.collector import BoardCollector
 
@@ -20,7 +21,9 @@ class BoardHandler(BaseHTTPRequestHandler):
     interval: float = 2.0
 
     def do_GET(self):
-        path = self.path.split("?")[0]
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
 
         if path == "/" or path == "/index.html":
             self._serve_static("index.html", "text/html")
@@ -37,7 +40,7 @@ class BoardHandler(BaseHTTPRequestHandler):
             if not team_name:
                 self.send_error(400, "Team name required")
                 return
-            self._serve_sse(team_name)
+            self._serve_sse(team_name, query)
         else:
             self.send_error(404)
 
@@ -74,7 +77,16 @@ class BoardHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
 
-    def _serve_sse(self, team_name: str):
+    def _serve_sse(self, team_name: str, query: dict[str, list[str]]):
+        run_id = query.get("run_id", [""])[0]
+        stage_id = query.get("stage_id", [""])[0]
+        worker_name = query.get("worker_name", [""])[0]
+        correlation_id = query.get("correlation_id", [""])[0]
+        try:
+            limit = int(query.get("limit", ["200"])[0] or "200")
+        except ValueError:
+            limit = 200
+        filtered = bool(run_id or stage_id or worker_name or correlation_id)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
@@ -84,7 +96,17 @@ class BoardHandler(BaseHTTPRequestHandler):
         try:
             while True:
                 try:
-                    data = self.collector.collect_team(team_name)
+                    if filtered:
+                        data = self.collector.collect_event_stream(
+                            team_name,
+                            run_id=run_id,
+                            stage_id=stage_id,
+                            worker_name=worker_name,
+                            correlation_id=correlation_id,
+                            limit=limit,
+                        )
+                    else:
+                        data = self.collector.collect_team(team_name, event_limit=limit)
                 except ValueError as e:
                     data = {"error": str(e)}
                 payload = json.dumps(data, ensure_ascii=False)

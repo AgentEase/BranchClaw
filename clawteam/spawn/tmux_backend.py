@@ -189,6 +189,8 @@ class TmuxBackend(SpawnBackend):
             tmux_target=target,
             pid=pane_pid,
             command=list(command),
+            agent_id=agent_id,
+            agent_type=agent_type,
         )
 
         return f"Agent '{agent_name}' spawned in tmux ({target})"

@@ -92,9 +92,11 @@ class LifecycleManager:
         team_dir = get_data_dir() / "teams" / team_name
         tasks_dir = get_data_dir() / "tasks" / team_name
         costs_dir = get_data_dir() / "costs" / team_name
+        events_dir = get_data_dir() / "events" / team_name
+        runs_dir = get_data_dir() / "runs" / team_name
         sessions_dir = get_data_dir() / "sessions" / team_name
         cleaned = False
-        for d in (team_dir, tasks_dir, costs_dir, sessions_dir):
+        for d in (team_dir, tasks_dir, costs_dir, events_dir, runs_dir, sessions_dir):
             if d.exists():
                 shutil.rmtree(d)
                 cleaned = True

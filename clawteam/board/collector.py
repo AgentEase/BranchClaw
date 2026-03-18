@@ -1,31 +1,26 @@
-"""Aggregates team/task/inbox data into plain dicts for rendering."""
+"""Aggregates team snapshots plus unified event stream data for rendering."""
 
 from __future__ import annotations
 
 import json
 
-from clawteam.team.mailbox import MailboxManager
+from clawteam.events import EventStore, EventTypes
 from clawteam.team.manager import TeamManager
 from clawteam.team.tasks import TaskStore
 
 
 class BoardCollector:
-    """Aggregates team/task/inbox data into plain dicts."""
+    """Aggregates team/task/inbox/event data into plain dicts."""
 
-    def collect_team(self, team_name: str) -> dict:
-        """Collect full board data for a single team.
-
-        Returns a dict with keys: team, members, tasks, taskSummary.
-        Raises ValueError if the team does not exist.
-        """
+    def collect_team(self, team_name: str, *, event_limit: int = 200) -> dict:
+        """Collect full board data for a single team."""
         config = TeamManager.get_team(team_name)
         if not config:
             raise ValueError(f"Team '{team_name}' not found")
 
-        mailbox = MailboxManager(team_name)
+        event_store = EventStore(team_name)
         store = TaskStore(team_name)
 
-        # Members with inbox counts
         members = []
         for m in config.members:
             inbox_name = f"{m.user}_{m.name}" if m.user else m.name
@@ -34,13 +29,12 @@ class BoardCollector:
                 "agentId": m.agent_id,
                 "agentType": m.agent_type,
                 "joinedAt": m.joined_at,
-                "inboxCount": mailbox.peek_count(inbox_name),
+                "inboxCount": self._pending_inbox_count(team_name, inbox_name),
             }
             if m.user:
                 entry["user"] = m.user
             members.append(entry)
 
-        # Tasks grouped by status
         all_tasks = store.list_tasks()
         grouped: dict[str, list[dict]] = {
             "pending": [],
@@ -48,37 +42,34 @@ class BoardCollector:
             "completed": [],
             "blocked": [],
         }
-        for t in all_tasks:
-            td = json.loads(t.model_dump_json(by_alias=True, exclude_none=True))
-            grouped[t.status.value].append(td)
+        for task in all_tasks:
+            grouped[task.status.value].append(
+                json.loads(task.model_dump_json(by_alias=True, exclude_none=True))
+            )
 
-        summary = {
-            s: len(grouped[s]) for s in grouped
-        }
+        summary = {status: len(grouped[status]) for status in grouped}
         summary["total"] = len(all_tasks)
 
-        # Find leader name
         leader_name = ""
-        for m in config.members:
-            if m.agent_id == config.lead_agent_id:
-                leader_name = m.name
+        for member in config.members:
+            if member.agent_id == config.lead_agent_id:
+                leader_name = member.name
                 break
 
-        # Collect message history from event log (persistent, never consumed)
-        all_messages = []
-        try:
-            events = mailbox.get_event_log(limit=200)
-            for msg in events:
-                all_messages.append(
-                    json.loads(msg.model_dump_json(by_alias=True, exclude_none=True))
-                )
-        except Exception:
-            pass
+        events = event_store.list_events(limit=event_limit)
+        event_dicts = [event.model_dump() for event in events]
+        messages = []
+        for event in events:
+            if event.event_type != EventTypes.MESSAGE_SENT:
+                continue
+            message = event.payload.get("message", event.payload)
+            if isinstance(message, dict):
+                messages.append(message)
 
-        # Cost summary
         cost_data = {}
         try:
             from clawteam.team.costs import CostStore
+
             cost_store = CostStore(team_name)
             cost_summary = cost_store.summary()
             cost_data = {
@@ -103,16 +94,45 @@ class BoardCollector:
             "members": members,
             "tasks": grouped,
             "taskSummary": summary,
-            "messages": all_messages,
+            "messages": messages,
+            "events": event_dicts,
             "cost": cost_data,
         }
 
-    def collect_overview(self) -> list[dict]:
-        """Collect summary data for all teams.
+    def collect_event_stream(
+        self,
+        team_name: str,
+        *,
+        run_id: str = "",
+        stage_id: str = "",
+        worker_name: str = "",
+        correlation_id: str = "",
+        limit: int = 200,
+    ) -> dict:
+        """Collect a filtered event stream without rendering the full team board."""
+        if not TeamManager.get_team(team_name):
+            raise ValueError(f"Team '{team_name}' not found")
+        events = EventStore(team_name).list_events(
+            run_id=run_id,
+            stage_id=stage_id,
+            worker_name=worker_name,
+            correlation_id=correlation_id,
+            limit=limit,
+        )
+        return {
+            "team": team_name,
+            "filters": {
+                "run_id": run_id,
+                "stage_id": stage_id,
+                "worker_name": worker_name,
+                "correlation_id": correlation_id,
+                "limit": limit,
+            },
+            "events": [event.model_dump() for event in events],
+        }
 
-        Returns a list of dicts with keys: name, description, leader,
-        members, tasks, pendingMessages.
-        """
+    def collect_overview(self) -> list[dict]:
+        """Collect summary data for all teams."""
         teams_meta = TeamManager.discover_teams()
         result = []
         for meta in teams_meta:
@@ -139,3 +159,10 @@ class BoardCollector:
                     "pendingMessages": 0,
                 })
         return result
+
+    @staticmethod
+    def _pending_inbox_count(team_name: str, inbox_name: str) -> int:
+        from clawteam.team.models import get_data_dir
+
+        inbox_dir = get_data_dir() / "teams" / team_name / "inboxes" / inbox_name
+        return len(list(inbox_dir.glob("msg-*.json"))) if inbox_dir.exists() else 0

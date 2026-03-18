@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from clawteam.events import EventStore, EventTypes
 from clawteam.workspace import git
 from clawteam.workspace.models import WorkspaceInfo, WorkspaceRegistry
 
@@ -97,7 +98,12 @@ class WorkspaceManager:
         ]
         registry.workspaces.append(info)
         _save_registry(registry)
-
+        EventStore(team_name).emit(
+            EventTypes.WORKSPACE_CREATED,
+            worker_name=agent_name,
+            correlation_id=agent_id,
+            payload={"workspace": info.model_dump()},
+        )
         return info
 
     # ------------------------------------------------------------------
@@ -115,7 +121,14 @@ class WorkspaceManager:
             return False
         ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         msg = message or f"[clawteam] checkpoint: {agent_name} @ {ts}"
-        return git.commit_all(Path(info.worktree_path), msg)
+        committed = git.commit_all(Path(info.worktree_path), msg)
+        if committed:
+            EventStore(team_name).emit(
+                EventTypes.WORKSPACE_CHECKPOINTED,
+                worker_name=agent_name,
+                payload={"workspace": info.model_dump(), "message": msg},
+            )
+        return committed
 
     # ------------------------------------------------------------------
     # Cleanup
@@ -151,6 +164,11 @@ class WorkspaceManager:
             w for w in registry.workspaces if w.agent_name != agent_name
         ]
         _save_registry(registry)
+        EventStore(team_name).emit(
+            EventTypes.WORKSPACE_CLEANED,
+            worker_name=agent_name,
+            payload={"workspace": info.model_dump(), "auto_checkpoint": auto_checkpoint},
+        )
         return True
 
     def cleanup_team(self, team_name: str) -> int:
@@ -183,6 +201,17 @@ class WorkspaceManager:
         target = target_branch or info.base_branch
         success, output = git.merge_branch(
             self.repo_root, info.branch_name, target,
+        )
+        EventStore(team_name).emit(
+            EventTypes.WORKSPACE_MERGED,
+            worker_name=agent_name,
+            payload={
+                "workspace": info.model_dump(),
+                "target_branch": target,
+                "success": success,
+                "output": output,
+                "cleanup_after": cleanup_after,
+            },
         )
 
         if success and cleanup_after:
