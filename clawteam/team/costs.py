@@ -9,6 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from clawteam.events import EventStore, EventTypes
 from clawteam.team.models import get_data_dir
 
 
@@ -59,6 +60,7 @@ class CostStore:
 
     def __init__(self, team_name: str):
         self.team_name = team_name
+        self._event_store = EventStore(team_name)
 
     def report(
         self,
@@ -85,6 +87,13 @@ class CostStore:
             event.model_dump_json(indent=2, by_alias=True), encoding="utf-8"
         )
         tmp.rename(path)
+        self._event_store.emit(
+            EventTypes.COST_RECORDED,
+            worker_name=agent_name,
+            correlation_id=event.id,
+            timestamp=event.reported_at,
+            payload={"cost": event.model_dump(by_alias=True)},
+        )
         return event
 
     def list_events(self, agent_name: str = "") -> list[CostEvent]:

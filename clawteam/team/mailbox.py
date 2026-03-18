@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-import time
 import uuid
 
-from clawteam.team.models import MessageType, TeamMessage, get_data_dir
+from clawteam.events import EventStore, EventTypes
+from clawteam.team.models import MessageType, TeamMessage
 from clawteam.transport.base import Transport
 
 
@@ -39,28 +39,30 @@ class MailboxManager:
     def __init__(self, team_name: str, transport: Transport | None = None):
         self.team_name = team_name
         self._transport = transport or _default_transport(team_name)
-        self._events_dir = get_data_dir() / "teams" / team_name / "events"
-        self._events_dir.mkdir(parents=True, exist_ok=True)
+        self._event_store = EventStore(team_name)
 
     def _log_event(self, msg: TeamMessage) -> None:
-        """Persist message to event log (never consumed, for history)."""
-        ts = int(time.time() * 1000)
-        uid = uuid.uuid4().hex[:8]
-        path = self._events_dir / f"evt-{ts}-{uid}.json"
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(
-            msg.model_dump_json(indent=2, by_alias=True, exclude_none=True),
-            encoding="utf-8",
+        """Persist mailbox history into the unified event stream."""
+        self._event_store.emit(
+            EventTypes.MESSAGE_SENT,
+            payload={"message": msg.model_dump(by_alias=True, exclude_none=True)},
+            worker_name=msg.from_agent,
+            correlation_id=msg.request_id or uuid.uuid4().hex[:12],
+            timestamp=msg.timestamp,
         )
-        tmp.rename(path)
 
     def get_event_log(self, limit: int = 100) -> list[TeamMessage]:
-        """Read event log (newest first). Non-destructive."""
-        files = sorted(self._events_dir.glob("evt-*.json"), reverse=True)[:limit]
+        """Read message history from the unified event stream."""
         msgs = []
-        for f in files:
+        events = self._event_store.list_events(
+            event_types=[EventTypes.MESSAGE_SENT],
+            limit=limit,
+            newest_first=True,
+        )
+        for event in events:
+            payload = event.payload.get("message", event.payload)
             try:
-                msgs.append(TeamMessage.model_validate(json.loads(f.read_text("utf-8"))))
+                msgs.append(TeamMessage.model_validate(payload))
             except Exception:
                 pass
         return msgs
