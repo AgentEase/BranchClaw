@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from clawteam.events import EventStore, EventTypes
 from clawteam.team.models import TaskItem, TaskStatus, get_data_dir
 
 
@@ -45,6 +46,7 @@ class TaskStore:
 
     def __init__(self, team_name: str):
         self.team_name = team_name
+        self._event_store = EventStore(team_name)
 
     @contextmanager
     def _write_lock(self):
@@ -78,6 +80,11 @@ class TaskStore:
             task.status = TaskStatus.blocked
         with self._write_lock():
             self._save_unlocked(task)
+        self._event_store.emit(
+            EventTypes.TASK_CREATED,
+            worker_name=task.owner,
+            payload={"task": task.model_dump(by_alias=True)},
+        )
         return task
 
     def get(self, task_id: str) -> TaskItem | None:
@@ -106,10 +113,12 @@ class TaskStore:
         caller: str = "",
         force: bool = False,
     ) -> TaskItem | None:
+        previous_task: TaskItem | None = None
         with self._write_lock():
             task = self._get_unlocked(task_id)
             if not task:
                 return None
+            previous_task = task.model_copy(deep=True)
 
             # Lock logic when transitioning to in_progress
             if status == TaskStatus.in_progress:
@@ -156,7 +165,28 @@ class TaskStore:
                 self._resolve_dependents_unlocked(task_id)
 
             self._save_unlocked(task)
-            return task
+
+        self._event_store.emit(
+            EventTypes.TASK_UPDATED,
+            worker_name=caller or task.owner,
+            payload={
+                "task": task.model_dump(by_alias=True),
+                "previous": previous_task.model_dump(by_alias=True) if previous_task else {},
+                "force": force,
+            },
+        )
+        if previous_task and previous_task.owner != task.owner:
+            self._event_store.emit(
+                EventTypes.TASK_REASSIGNED,
+                worker_name=caller or task.owner,
+                payload={
+                    "task_id": task.id,
+                    "previous_owner": previous_task.owner,
+                    "owner": task.owner,
+                    "task": task.model_dump(by_alias=True),
+                },
+            )
+        return task
 
     def _acquire_lock(self, task: TaskItem, caller: str, force: bool) -> None:
         """Acquire lock on a task for the caller agent."""
@@ -269,6 +299,15 @@ class TaskStore:
                     task.blocked_by.remove(completed_task_id)
                     if not task.blocked_by and task.status == TaskStatus.blocked:
                         task.status = TaskStatus.pending
+                        self._event_store.emit(
+                            EventTypes.TASK_UNBLOCKED,
+                            worker_name=task.owner,
+                            payload={
+                                "task_id": task.id,
+                                "unblocked_by": completed_task_id,
+                                "task": task.model_dump(by_alias=True),
+                            },
+                        )
                     task.updated_at = _now_iso()
                     self._save_unlocked(task)
             except Exception:

@@ -186,10 +186,12 @@ class TeamManager:
         team_dir = _team_dir(team_name)
         tasks_dir = get_data_dir() / "tasks" / team_name
         costs_dir = get_data_dir() / "costs" / team_name
+        events_dir = get_data_dir() / "events" / team_name
+        runs_dir = get_data_dir() / "runs" / team_name
         sessions_dir = get_data_dir() / "sessions" / team_name
         plans_dir = team_plans_path(team_name)
         cleaned = False
-        for d in (team_dir, tasks_dir, costs_dir, sessions_dir, plans_dir):
+        for d in (team_dir, tasks_dir, costs_dir, events_dir, runs_dir, sessions_dir, plans_dir):
             if d.exists():
                 shutil.rmtree(d)
                 cleaned = True

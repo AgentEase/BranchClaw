@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from pathlib import Path
 
+from clawteam.events import EventStore, EventTypes
 from clawteam.team.mailbox import MailboxManager
 from clawteam.team.models import MessageType, get_data_dir
 
@@ -60,18 +60,15 @@ def team_plans_path(team_name: str) -> Path:
 
 def referenced_legacy_plan_paths(team_name: str) -> set[Path]:
     """Return legacy flat plan files referenced by this team's event log."""
-    team_events_dir = get_data_dir() / "teams" / team_name / "events"
     plans_root = _plans_root_path()
     paths: set[Path] = set()
-    if not team_events_dir.exists():
-        return paths
-
-    for event_file in team_events_dir.glob("evt-*.json"):
-        try:
-            data = json.loads(event_file.read_text(encoding="utf-8"))
-        except Exception:
+    for event in EventStore(team_name).list_events(
+        event_types=[EventTypes.MESSAGE_SENT],
+        newest_first=False,
+    ):
+        data = event.payload.get("message", event.payload)
+        if not isinstance(data, dict):
             continue
-
         if data.get("type") != MessageType.plan_approval_request.value:
             continue
 
