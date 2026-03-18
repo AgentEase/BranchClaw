@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawTeam — Agent Swarm Intelligence</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; background: #fafafa; line-height: 1.6; }
+    h1 { font-size: 2em; margin-bottom: 0.2em; }
+    .subtitle { color: #666; font-size: 1.1em; margin-bottom: 2em; }
+    .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 24px; margin-bottom: 16px; transition: box-shadow 0.2s; }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .card-title { font-size: 1.3em; font-weight: 600; color: #1a1a2e; text-decoration: none; }
+    .card-title:hover { color: #4a6cf7; }
+    .card-desc { color: #555; margin-top: 8px; }
+    .card-meta { margin-top: 12px; font-size: 0.85em; color: #888; }
+    .card-meta a { color: #4a6cf7; text-decoration: none; }
+    .card-meta a:hover { text-decoration: underline; }
+    .install-box { background: #1a1a2e; color: #e0e0e0; border-radius: 8px; padding: 14px 18px; font-family: monospace; font-size: 0.95em; margin-top: 12px; }
+    .install-box code { color: #7dd3fc; }
+    h2 { font-size: 1.4em; margin-top: 2em; margin-bottom: 0.8em; }
+    footer { margin-top: 3em; padding-top: 1.5em; border-top: 1px solid #e0e0e0; color: #999; font-size: 0.85em; }
+    footer a { color: #4a6cf7; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>ClawTeam</h1>
+  <p class="subtitle">Agent Swarm Intelligence — let AI agents orchestrate themselves.</p>
+
+  <h2>Install</h2>
+  <div class="install-box">
+    <code>pip install clawteam</code>
+  </div>
+
+  <h2>Agent Skills</h2>
+  <div class="card">
+    <a class="card-title" href="skills/clawteam/SKILL.md">ClawTeam Multi-Agent Coordination</a>
+    <p class="card-desc">
+      Orchestrate multiple AI agents as a team — spawn sub-agents, assign tasks with dependency chains,
+      send messages, and monitor progress on a kanban board. Works with any CLI agent.
+    </p>
+    <div class="install-box">
+      <code>npx skills add HKUDS/ClawTeam</code>
+    </div>
+    <div class="card-meta">
+      <a href="skills/clawteam/SKILL.md">SKILL.md</a> &middot;
+      <a href="skills/clawteam/references/cli-reference.md">CLI Reference</a> &middot;
+      <a href="skills/clawteam/references/workflows.md">Workflows</a> &middot;
+      <a href="https://pypi.org/project/clawteam/">PyPI</a>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/HKUDS/ClawTeam">GitHub</a> &middot;
+    <a href="https://github.com/HKUDS">HKUDS</a> &middot;
+    Powered by <a href="https://agentskills.io">Agent Skills</a> open standard
+  </footer>
+</body>
+</html>
