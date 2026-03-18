@@ -180,15 +180,17 @@ class TmuxBackend(SpawnBackend):
             except ValueError:
                 pass
 
-        # Persist spawn info for liveness checking
-        from clawteam.spawn.registry import register_agent
-        register_agent(
-            team_name=team_name,
-            agent_name=agent_name,
+        from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
+
+        WorkerRuntimeStore(team_name).record_spawn(
+            worker_name=agent_name,
+            worker_id=agent_id,
             backend="tmux",
             tmux_target=target,
             pid=pane_pid,
             command=list(command),
+            current_stage="spawned",
+            state=WorkerState.ready,
         )
 
         return f"Agent '{agent_name}' spawned in tmux ({target})"

@@ -1320,6 +1320,184 @@ def session_clear(
 
 
 # ============================================================================
+# Worker Runtime Commands
+# ============================================================================
+
+worker_app = typer.Typer(help="Unified worker runtime commands")
+app.add_typer(worker_app, name="worker")
+
+
+@worker_app.command("list")
+def worker_list(
+    team: str = typer.Argument(..., help="Team name"),
+    stale_after: int = typer.Option(120, "--stale-after", help="Heartbeat stale threshold in seconds"),
+):
+    """List workers and their unified runtime state."""
+    from clawteam.worker_runtime import WorkerRuntimeStore
+    from clawteam.worker_runtime.store import heartbeat_is_stale
+
+    store = WorkerRuntimeStore(team)
+    workers = store.list_workers()
+    data = []
+    for worker in workers:
+        stale = bool(worker.last_heartbeat and heartbeat_is_stale(worker.last_heartbeat, stale_after))
+        data.append({
+            "workerName": worker.worker_name,
+            "workerId": worker.worker_id,
+            "state": worker.state.value,
+            "backend": worker.spawn_backend,
+            "assignment": worker.assignment,
+            "currentStage": worker.current_stage,
+            "sessionId": worker.session_id,
+            "pid": worker.pid,
+            "tmuxTarget": worker.tmux_target,
+            "lastHeartbeat": worker.last_heartbeat.recorded_at if worker.last_heartbeat else "",
+            "stale": stale,
+            "workspacePath": worker.workspace.worktree_path if worker.workspace else "",
+        })
+
+    def _human(items):
+        if not items:
+            console.print("[dim]No workers found[/dim]")
+            return
+        table = Table(title=f"Workers — {team}")
+        table.add_column("Name", style="cyan")
+        table.add_column("State")
+        table.add_column("Stage", style="dim")
+        table.add_column("Assignment")
+        table.add_column("Backend", style="dim")
+        table.add_column("Heartbeat", style="dim")
+        table.add_column("Notes")
+        for item in items:
+            notes = []
+            if item["stale"]:
+                notes.append("stale")
+            if item["workspacePath"]:
+                notes.append("workspace")
+            table.add_row(
+                item["workerName"],
+                item["state"],
+                item["currentStage"],
+                item["assignment"],
+                item["backend"],
+                (item["lastHeartbeat"] or "")[:19],
+                ", ".join(notes),
+            )
+        console.print(table)
+
+    _output(data, _human)
+
+
+@worker_app.command("show")
+def worker_show(
+    name: str = typer.Argument(..., help="Worker name"),
+    team: Optional[str] = typer.Option(None, "--team", "-t", help="Team name (default: env)"),
+):
+    """Show a single worker runtime record."""
+    from clawteam.identity import AgentIdentity
+    from clawteam.worker_runtime import WorkerRuntimeStore
+
+    team_name = team or AgentIdentity.from_env().team_name or "default"
+    record = WorkerRuntimeStore(team_name).load(name)
+    if record is None:
+        _output({"error": f"Worker '{name}' not found"}, lambda d: console.print(f"[red]{d['error']}[/red]"))
+        raise typer.Exit(1)
+
+    data = _dump(record)
+    _output(data, lambda d: console.print_json(json.dumps(d, ensure_ascii=False, indent=2)))
+
+
+@worker_app.command("heartbeat")
+def worker_heartbeat(
+    team: Optional[str] = typer.Option(None, "--team", "-t", help="Team name (default: env)"),
+    agent: Optional[str] = typer.Option(None, "--agent", "-a", help="Worker name (default: env)"),
+    state: str = typer.Option("running", "--state", help="Worker state"),
+    assignment: str = typer.Option("", "--assignment", help="Current assignment or task"),
+    stage: str = typer.Option("active", "--stage", help="Current runtime stage"),
+    session_id: str = typer.Option("", "--session-id", help="Session identifier"),
+):
+    """Write a worker heartbeat into the unified runtime store."""
+    import os
+
+    from clawteam.identity import AgentIdentity
+    from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
+
+    identity = AgentIdentity.from_env()
+    team_name = team or identity.team_name or "default"
+    worker_name = agent or identity.agent_name
+    worker_state = WorkerState(state)
+    record = WorkerRuntimeStore(team_name).record_heartbeat(
+        worker_name=worker_name,
+        state=worker_state,
+        assignment=assignment,
+        current_stage=stage,
+        session_id=session_id or None,
+        pid=os.getpid(),
+    )
+    _output(_dump(record), lambda d: console.print(f"[green]OK[/green] Heartbeat recorded for '{worker_name}'"))
+
+
+@worker_app.command("recover")
+def worker_recover(
+    team: str = typer.Argument(..., help="Team name"),
+    name: Optional[str] = typer.Argument(None, help="Optional worker name"),
+    stale_after: int = typer.Option(120, "--stale-after", help="Heartbeat stale threshold in seconds"),
+):
+    """Recover stale or exited workers by requeueing their tasks and resetting runtime state."""
+    from clawteam.team.models import TaskStatus
+    from clawteam.team.tasks import TaskStore
+    from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
+    from clawteam.worker_runtime.store import heartbeat_is_stale
+
+    store = WorkerRuntimeStore(team)
+    task_store = TaskStore(team)
+
+    if name:
+        candidates = [store.load(name)]
+    else:
+        candidates = []
+        for worker in store.list_workers():
+            is_stale = bool(worker.last_heartbeat and heartbeat_is_stale(worker.last_heartbeat, stale_after))
+            if worker.state in (WorkerState.exited, WorkerState.blocked) or is_stale:
+                candidates.append(worker)
+
+    recovered = []
+    for worker in candidates:
+        if worker is None:
+            continue
+        reset_tasks = []
+        for task in task_store.list_tasks(owner=worker.worker_name):
+            if task.status == TaskStatus.in_progress:
+                task_store.update(task.id, status=TaskStatus.pending)
+                reset_tasks.append(task.id)
+        updated = store.recover_worker(
+            worker.worker_name,
+            state=WorkerState.ready,
+            stage="recovered",
+            clear_assignment=bool(reset_tasks),
+        )
+        if updated is None:
+            continue
+        recovered.append({
+            "workerName": updated.worker_name,
+            "state": updated.state.value,
+            "resetTasks": reset_tasks,
+        })
+
+    def _human(items):
+        if not items:
+            console.print("[dim]No workers recovered[/dim]")
+            return
+        for item in items:
+            console.print(
+                f"[green]OK[/green] Recovered {item['workerName']}"
+                f" (reset {len(item['resetTasks'])} task(s))"
+            )
+
+    _output(recovered, _human)
+
+
+# ============================================================================
 # Plan Commands
 # ============================================================================
 
@@ -1491,6 +1669,7 @@ def lifecycle_idle(
     from clawteam.team.lifecycle import LifecycleManager
     from clawteam.team.mailbox import MailboxManager
     from clawteam.team.manager import TeamManager
+    from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
 
     identity = AgentIdentity.from_env()
     team_name = team
@@ -1507,6 +1686,13 @@ def lifecycle_idle(
         leader_name=leader_name,
         last_task=last_task or "",
         task_status=task_status or "",
+    )
+    WorkerRuntimeStore(team_name).record_heartbeat(
+        worker_name=identity.agent_name,
+        state=WorkerState.idle,
+        assignment=last_task or "",
+        current_stage="idle",
+        metadata={"taskStatus": task_status or ""},
     )
 
     _output(
@@ -1528,7 +1714,9 @@ def lifecycle_on_exit(
     from clawteam.team.manager import TeamManager
     from clawteam.team.models import TaskStatus
     from clawteam.team.tasks import TaskStore
+    from clawteam.worker_runtime import WorkerRuntimeStore
 
+    runtime = WorkerRuntimeStore(team)
     store = TaskStore(team)
     tasks = store.list_tasks()
 
@@ -1539,11 +1727,13 @@ def lifecycle_on_exit(
     ]
 
     if not abandoned:
-        # Agent exited cleanly (all tasks already completed or pending)
+        runtime.mark_exited(agent, reason="clean_exit")
         return
 
     for t in abandoned:
         store.update(t.id, status=TaskStatus.pending)
+
+    runtime.mark_exited(agent, reason="abandoned_in_progress_tasks")
 
     # Notify leader
     leader_name = TeamManager.get_leader_name(team)
@@ -1605,6 +1795,11 @@ def spawn_agent(
     _name = agent_name or f"agent-{uuid.uuid4().hex[:6]}"
     _id = uuid.uuid4().hex[:12]
 
+    from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
+
+    runtime_store = WorkerRuntimeStore(_team)
+    runtime_store.ensure_worker(_name, worker_id=_id, state=WorkerState.created)
+
     # Resolve skip_permissions from config
     if skip_permissions is None:
         sp_val, _ = get_effective("skip_permissions")
@@ -1648,6 +1843,7 @@ def spawn_agent(
         from clawteam.spawn.prompt import build_agent_prompt
         from clawteam.team.manager import TeamManager
 
+        runtime_store.update_worker(_name, assignment=task, current_stage="prompt_built")
         leader_name = TeamManager.get_leader_name(_team) or "leader"
         prompt = build_agent_prompt(
             agent_name=_name,
@@ -1698,6 +1894,13 @@ def spawn_agent(
         prompt=prompt,
         cwd=cwd,
         skip_permissions=skip_permissions,
+    )
+    runtime_store.record_heartbeat(
+        worker_name=_name,
+        state=WorkerState.running if task else WorkerState.ready,
+        assignment=task or "",
+        current_stage="launched",
+        session_id="",
     )
 
     _output(

@@ -85,14 +85,16 @@ class SubprocessBackend(SpawnBackend):
         )
         self._processes[agent_name] = process
 
-        # Persist spawn info for liveness checking
-        from clawteam.spawn.registry import register_agent
-        register_agent(
-            team_name=team_name,
-            agent_name=agent_name,
+        from clawteam.worker_runtime import WorkerRuntimeStore, WorkerState
+
+        WorkerRuntimeStore(team_name).record_spawn(
+            worker_name=agent_name,
+            worker_id=agent_id,
             backend="subprocess",
             pid=process.pid,
             command=list(command),
+            current_stage="spawned",
+            state=WorkerState.ready,
         )
 
         return f"Agent '{agent_name}' spawned as subprocess (pid={process.pid})"
