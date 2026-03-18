@@ -8,6 +8,7 @@ import subprocess
 
 from clawteam.spawn.base import SpawnBackend
 from clawteam.spawn.cli_env import build_spawn_path, resolve_clawteam_executable
+from clawteam.spawn.command_validation import normalize_spawn_command, validate_spawn_command
 
 
 class SubprocessBackend(SpawnBackend):
@@ -53,14 +54,25 @@ class SubprocessBackend(SpawnBackend):
         if os.path.isabs(clawteam_bin):
             spawn_env.setdefault("CLAWTEAM_BIN", clawteam_bin)
 
-        final_command = list(command)
+        normalized_command = normalize_spawn_command(command)
+
+        command_error = validate_spawn_command(normalized_command, path=spawn_env["PATH"], cwd=cwd)
+        if command_error:
+            return command_error
+
+        final_command = list(normalized_command)
         if skip_permissions:
-            if _is_claude_command(command):
+            if _is_claude_command(normalized_command):
                 final_command.append("--dangerously-skip-permissions")
-            elif _is_codex_command(command):
+            elif _is_codex_command(normalized_command):
                 final_command.append("--dangerously-bypass-approvals-and-sandbox")
-        if prompt:
-            if _is_codex_command(command):
+        if _is_nanobot_command(normalized_command):
+            if cwd and not _command_has_workspace_arg(normalized_command):
+                final_command.extend(["-w", cwd])
+            if prompt:
+                final_command.extend(["-m", prompt])
+        elif prompt:
+            if _is_codex_command(normalized_command):
                 # Codex accepts prompt as positional argument
                 final_command.append(prompt)
             else:
@@ -92,7 +104,7 @@ class SubprocessBackend(SpawnBackend):
             agent_name=agent_name,
             backend="subprocess",
             pid=process.pid,
-            command=list(command),
+            command=list(normalized_command),
         )
 
         return f"Agent '{agent_name}' spawned as subprocess (pid={process.pid})"
@@ -121,3 +133,16 @@ def _is_codex_command(command: list[str]) -> bool:
         return False
     cmd = command[0].rsplit("/", 1)[-1]
     return cmd in ("codex", "codex-cli")
+
+
+def _is_nanobot_command(command: list[str]) -> bool:
+    """Check if the command is a nanobot CLI invocation."""
+    if not command:
+        return False
+    cmd = command[0].rsplit("/", 1)[-1]
+    return cmd == "nanobot"
+
+
+def _command_has_workspace_arg(command: list[str]) -> bool:
+    """Return True when a command already specifies a nanobot workspace."""
+    return "-w" in command or "--workspace" in command

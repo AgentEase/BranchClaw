@@ -1620,6 +1620,7 @@ def spawn_agent(
     cwd = None
     ws_branch = ""
     ws_mode = ""
+    ws_mgr = None
     if workspace is None:
         ws_mode, _ = get_effective("workspace")
         ws_mode = ws_mode or "auto"
@@ -1678,6 +1679,7 @@ def spawn_agent(
     import os as _os2
 
     from clawteam.team.manager import TeamManager
+    member_added = False
     try:
         TeamManager.add_member(
             team_name=_team,
@@ -1686,6 +1688,7 @@ def spawn_agent(
             agent_type=agent_type,
             user=_os2.environ.get("CLAWTEAM_USER", ""),
         )
+        member_added = True
     except ValueError:
         pass  # already a member, ignore
 
@@ -1699,6 +1702,17 @@ def spawn_agent(
         cwd=cwd,
         skip_permissions=skip_permissions,
     )
+
+    if result.startswith("Error"):
+        if member_added:
+            TeamManager.remove_member(_team, _name)
+        if ws_mgr is not None and cwd:
+            try:
+                ws_mgr.cleanup_workspace(_team, _name, auto_checkpoint=False)
+            except Exception:
+                pass
+        _output({"error": result}, lambda d: console.print(f"[red]{d['error']}[/red]"))
+        raise typer.Exit(1)
 
     _output(
         {"status": "spawned", "backend": backend, "agentName": _name, "agentId": _id, "message": result},

@@ -349,9 +349,34 @@ pip install -e ".[p2p]"
 
 Requires **Python 3.10+**, **tmux**, and a CLI coding agent (e.g. `claude`, `codex`). Python dependencies: `typer`, `pydantic`, `rich`.
 
+All `spawn` examples assume the agent CLI you name is already installed and available on `PATH`.
+
 ---
 
 ## 🚀 Quick Start
+
+If you're new to ClawTeam, follow this order:
+
+1. Make sure `tmux` and your agent CLI run standalone on this machine.
+2. Pick one path below: let an agent drive, or drive it manually.
+3. Use the supported-agent table to choose the right `spawn` command.
+4. If you're integrating a new agent, check the adapter notes before debugging.
+
+### ✅ Before You Start
+
+Run these checks first:
+
+```bash
+tmux -V
+clawteam --help
+
+# Replace claude with the agent you actually want to use:
+claude --version
+codex --version
+nanobot --help
+```
+
+If the agent CLI does not run correctly by itself, `clawteam spawn` will not fix it.
 
 ### ⚡ Option 1: Let the Agent Drive (Recommended)
 
@@ -383,9 +408,52 @@ clawteam spawn --team my-team --agent-name bob   --task "Write unit tests for au
 clawteam board attach my-team
 ```
 
+### 🧭 Which Spawn Command Should I Use?
+
+Use `clawteam spawn [backend] [command] ...` with the command that already works on
+your machine:
+
+```bash
+# Claude Code
+clawteam spawn tmux claude --team my-team --agent-name alice --task "Implement OAuth2"
+
+# Codex
+clawteam spawn tmux codex --team my-team --agent-name bob --task "Write frontend tests"
+
+# nanobot
+clawteam spawn tmux nanobot --team my-team --agent-name carol --task "Build the API"
+```
+
+Notes:
+
+- `tmux` is the default backend and is the best choice when you want to watch interactive agent UIs.
+- `subprocess` is better for one-shot tools or non-interactive scripts.
+- `nanobot` is normalized internally to `nanobot agent`, so the command above is the correct ClawTeam entrypoint.
+- Claude Code and Codex trust prompts in fresh worktrees are auto-confirmed by the tmux backend.
+
+### 🔌 Adding a Different Agent
+
+ClawTeam can work with agents beyond Claude Code, Codex, and nanobot, but the CLI
+must satisfy a small compatibility contract:
+
+1. The command must exist on `PATH` and launch successfully outside ClawTeam.
+2. The agent must be able to run inside a specific working directory or git worktree.
+3. The agent must accept an initial task, either by command-line argument or interactive input.
+4. The process must stay alive in `tmux` if it is meant to be interactive.
+
+If you're unsure, test the agent standalone first, then wrap it with:
+
+```bash
+clawteam spawn subprocess <your-agent> --team my-team --agent-name test --task "Say OK"
+```
+
+If that works, switch to `tmux` for interactive monitoring.
+
 ### 🤖 Supported Agents
 
 ClawTeam works with **any CLI agent** that can execute shell commands:
+
+All examples below assume the corresponding CLI already runs standalone on your machine.
 
 | Agent | Spawn Command | Status |
 |-------|--------------|--------|
