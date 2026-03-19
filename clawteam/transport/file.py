@@ -50,16 +50,20 @@ class FileTransport(Transport):
         messages: list[bytes] = []
         for f in files[:limit]:
             try:
-                raw = f.read_bytes()
-                messages.append(raw)
                 if consume:
-                    f.unlink()
-            except Exception:
-                if consume:
+                    consumed = f.with_suffix(".consumed")
                     try:
-                        f.unlink()
+                        f.rename(consumed)
                     except OSError:
-                        pass
+                        continue
+                    try:
+                        messages.append(consumed.read_bytes())
+                    finally:
+                        consumed.unlink(missing_ok=True)
+                else:
+                    messages.append(f.read_bytes())
+            except Exception:
+                continue
         return messages
 
     def count(self, agent_name: str) -> int:

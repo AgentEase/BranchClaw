@@ -1,6 +1,9 @@
 """Tests for clawteam.team.mailbox — MailboxManager send/receive/broadcast."""
 
+from pathlib import Path
+
 from clawteam.team.mailbox import MailboxManager
+from clawteam.team.manager import TeamManager
 from clawteam.team.models import MessageType
 from clawteam.transport.file import FileTransport
 
@@ -86,6 +89,19 @@ class TestPeek:
         mb.send(from_agent="a", to="bob", content="2")
         assert mb.peek_count("bob") == 2
 
+    def test_peek_skips_corrupt_messages(self, team_name):
+        mb = _make_mailbox(team_name)
+        mb.send(from_agent="a", to="bob", content="good")
+
+        from clawteam.team.models import get_data_dir
+
+        inbox = get_data_dir() / "teams" / team_name / "inboxes" / "bob"
+        (inbox / "msg-corrupt.json").write_text("not valid json", encoding="utf-8")
+
+        peeked = mb.peek("bob")
+        assert len(peeked) == 1
+        assert peeked[0].content == "good"
+
 
 class TestBroadcast:
     def test_broadcast_to_all_except_sender(self, team_name):
@@ -118,11 +134,66 @@ class TestBroadcast:
         assert "bob" in recipients
         assert "dave" in recipients
 
+    def test_broadcast_excludes_namespaced_inboxes(self, team_name):
+        TeamManager.create_team(
+            name=team_name,
+            leader_name="lead",
+            leader_id="leader001",
+            user="alice",
+        )
+        TeamManager.add_member(team_name, "worker", agent_id="worker001", user="alice")
+        TeamManager.add_member(team_name, "reviewer", agent_id="review001", user="alice")
+
+        mb = _make_mailbox(team_name)
+        sent = mb.broadcast(from_agent="worker", content="hi", exclude=["reviewer"])
+
+        recipients = {m.to for m in sent}
+        assert "alice_worker" not in recipients
+        assert "alice_reviewer" not in recipients
+        assert "alice_lead" in recipients
+
+    def test_receive_skips_corrupt_messages(self, team_name):
+        mb = _make_mailbox(team_name)
+        mb.send(from_agent="a", to="bob", content="good")
+
+        from clawteam.team.models import get_data_dir
+
+        inbox = get_data_dir() / "teams" / team_name / "inboxes" / "bob"
+        (inbox / "msg-corrupt.json").write_text("not valid json", encoding="utf-8")
+
+        received = mb.receive("bob")
+        assert len(received) == 1
+        assert received[0].content == "good"
+
     def test_broadcast_empty_team(self, team_name):
         mb = _make_mailbox(team_name)
         # no inboxes created, nothing to send to
         sent = mb.broadcast(from_agent="lonely", content="anyone?")
         assert sent == []
+
+
+class TestFileTransport:
+    def test_fetch_consume_skips_message_if_claim_fails(self, team_name, monkeypatch):
+        transport = FileTransport(team_name)
+        transport.deliver("bob", b'{"type":"message","from":"alice","to":"bob","content":"hello"}')
+
+        from clawteam.team.models import get_data_dir
+
+        inbox = get_data_dir() / "teams" / team_name / "inboxes" / "bob"
+        message_files = list(inbox.glob("msg-*.json"))
+        assert len(message_files) == 1
+
+        original_rename = Path.rename
+
+        def fake_rename(self, target):
+            if self == message_files[0]:
+                raise OSError("claimed by another consumer")
+            return original_rename(self, target)
+
+        monkeypatch.setattr(Path, "rename", fake_rename)
+
+        assert transport.fetch("bob", consume=True) == []
+        assert len(list(inbox.glob("msg-*.json"))) == 1
 
 
 class TestEventLog:
