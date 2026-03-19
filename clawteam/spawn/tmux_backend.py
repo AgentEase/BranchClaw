@@ -11,7 +11,15 @@ import time
 
 from clawteam.spawn.base import SpawnBackend
 from clawteam.spawn.cli_env import build_spawn_path, resolve_clawteam_executable
-from clawteam.spawn.command_validation import normalize_spawn_command, validate_spawn_command
+from clawteam.spawn.command_validation import (
+    command_has_workspace_arg,
+    is_claude_command,
+    is_codex_command,
+    is_gemini_command,
+    is_nanobot_command,
+    normalize_spawn_command,
+    validate_spawn_command,
+)
 
 
 class TmuxBackend(SpawnBackend):
@@ -75,21 +83,21 @@ class TmuxBackend(SpawnBackend):
         # Build the command (without prompt — we'll send it via send-keys)
         final_command = list(normalized_command)
         if skip_permissions:
-            if _is_claude_command(normalized_command):
+            if is_claude_command(normalized_command):
                 final_command.append("--dangerously-skip-permissions")
-            elif _is_codex_command(normalized_command):
+            elif is_codex_command(normalized_command):
                 final_command.append("--dangerously-bypass-approvals-and-sandbox")
-            elif _is_gemini_command(normalized_command):
+            elif is_gemini_command(normalized_command):
                 final_command.append("--yolo")
 
-        if _is_nanobot_command(normalized_command):
-            if cwd and not _command_has_workspace_arg(normalized_command):
+        if is_nanobot_command(normalized_command):
+            if cwd and not command_has_workspace_arg(normalized_command):
                 final_command.extend(["-w", cwd])
             if prompt:
                 final_command.extend(["-m", prompt])
-        elif prompt and _is_codex_command(normalized_command):
+        elif prompt and is_codex_command(normalized_command):
             final_command.append(prompt)
-        elif prompt and _is_gemini_command(normalized_command):
+        elif prompt and is_gemini_command(normalized_command):
             final_command.extend(["-p", prompt])
 
         cmd_str = " ".join(shlex.quote(c) for c in final_command)
@@ -150,7 +158,7 @@ class TmuxBackend(SpawnBackend):
 
         # Send the prompt as input to the interactive claude session
         # (codex prompt is passed as positional arg above, so skip here)
-        if prompt and _is_claude_command(normalized_command):
+        if prompt and is_claude_command(normalized_command):
             # Wait for Claude Code to finish startup and show input prompt.
             # Bedrock-backed instances can take 10+ seconds to initialize.
             _wait_for_claude_ready(target, timeout_seconds=30)
@@ -191,7 +199,7 @@ class TmuxBackend(SpawnBackend):
                 stderr=subprocess.PIPE,
             )
             os.unlink(tmp_path)
-        elif prompt and not _is_codex_command(normalized_command) and not _is_nanobot_command(normalized_command) and not _is_gemini_command(normalized_command):
+        elif prompt and not is_codex_command(normalized_command) and not is_nanobot_command(normalized_command) and not is_gemini_command(normalized_command):
             time.sleep(1)
             subprocess.run(
                 ["tmux", "send-keys", "-t", target, prompt, "Enter"],
@@ -305,43 +313,6 @@ class TmuxBackend(SpawnBackend):
         return result
 
 
-def _is_claude_command(command: list[str]) -> bool:
-    """Check if the command is a claude CLI invocation."""
-    if not command:
-        return False
-    cmd = command[0].rsplit("/", 1)[-1]  # basename
-    return cmd in ("claude", "claude-code")
-
-
-def _is_codex_command(command: list[str]) -> bool:
-    """Check if the command is a codex CLI invocation."""
-    if not command:
-        return False
-    cmd = command[0].rsplit("/", 1)[-1]  # basename
-    return cmd in ("codex", "codex-cli")
-
-
-def _is_nanobot_command(command: list[str]) -> bool:
-    """Check if the command is a nanobot CLI invocation."""
-    if not command:
-        return False
-    cmd = command[0].rsplit("/", 1)[-1]
-    return cmd == "nanobot"
-
-
-def _is_gemini_command(command: list[str]) -> bool:
-    """Check if the command is a Gemini CLI invocation."""
-    if not command:
-        return False
-    cmd = command[0].rsplit("/", 1)[-1]
-    return cmd == "gemini"
-
-
-def _command_has_workspace_arg(command: list[str]) -> bool:
-    """Return True when a command already specifies a nanobot workspace."""
-    return "-w" in command or "--workspace" in command
-
-
 def _confirm_workspace_trust_if_prompted(
     target: str,
     command: list[str],
@@ -355,7 +326,7 @@ def _confirm_workspace_trust_if_prompted(
     injection and accept it with a single Enter so the interactive TUI remains
     intact.
     """
-    if not (_is_claude_command(command) or _is_codex_command(command) or _is_gemini_command(command)):
+    if not (is_claude_command(command) or is_codex_command(command) or is_gemini_command(command)):
         return False
 
     deadline = time.monotonic() + timeout_seconds
@@ -385,31 +356,21 @@ def _looks_like_workspace_trust_prompt(command: list[str], pane_text: str) -> bo
     if not pane_text:
         return False
 
-    if _is_claude_command(command):
+    if is_claude_command(command):
         return ("trust this folder" in pane_text or "trust the contents" in pane_text) and (
             "enter to confirm" in pane_text or "press enter" in pane_text or "enter to continue" in pane_text
         )
 
-    if _is_codex_command(command):
+    if is_codex_command(command):
         return (
             "trust the contents of this directory" in pane_text
             and "press enter to continue" in pane_text
         )
 
-    if _is_gemini_command(command):
+    if is_gemini_command(command):
         return "trust folder" in pane_text or "trust parent folder" in pane_text
 
     return False
-
-
-def _is_interactive_cli(command: list[str]) -> bool:
-    """Check if the command is an interactive AI CLI."""
-    return (
-        _is_claude_command(command)
-        or _is_codex_command(command)
-        or _is_nanobot_command(command)
-        or _is_gemini_command(command)
-    )
 
 
 def _wait_for_claude_ready(
