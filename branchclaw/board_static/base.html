@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BranchClaw Dashboard</title>
+  <link rel="stylesheet" href="/static/board.css">
+</head>
+<body data-page="{{PAGE_ID}}">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <h1>BranchClaw</h1>
+        <p>Select a workdir. Open a run. Operate from worktrees.</p>
+      </div>
+      <div class="toolbar">
+        <div class="statusline">
+          <span id="connection-pill" class="pill">Connecting</span>
+          <span id="summary-line">Loading dashboard…</span>
+        </div>
+        <div class="field-inline">
+          <span for="operator-actor">Operator</span>
+          <input id="operator-actor" value="dashboard">
+        </div>
+        <div class="actions">
+          <button id="home-button" class="ghost" type="button">Workdir Home</button>
+          <button id="control-plane-button" class="ghost" type="button">Control Plane</button>
+          <button id="refresh-button" type="button">Refresh</button>
+          <button id="new-run-button" type="button">Create Run</button>
+        </div>
+      </div>
+    </div>
+    <div id="content" class="hidden">
+      <div class="index-shell">
+        <div id="summary-strip" class="summary-strip"></div>
+        <div id="page-index" class="page-index"></div>
+      </div>
+      <div class="main-pages">
+{{PAGE_CONTENT}}
+      </div>
+      <div id="page-templates" class="hidden">
+{{PAGE_TEMPLATES}}
+      </div>
+    </div>
+    <div id="drawer-backdrop" class="drawer-backdrop hidden">
+      <aside class="drawer-panel">
+        <div class="drawer-header">
+          <div class="drawer-title">
+            <h2 id="drawer-title">New Run</h2>
+            <p id="drawer-description">Create a run or add a worktree without leaving the dashboard.</p>
+          </div>
+          <button class="ghost" data-action="close-drawer" type="button">Close</button>
+        </div>
+        <form id="new-run-form" class="drawer-form hidden">
+          <div class="drawer-grid">
+            <div class="field-block">
+              <span for="new-run-data-dir-select">Target Workdir</span>
+              <select id="new-run-data-dir-select"></select>
+            </div>
+            <div class="field-block">
+              <span for="new-run-profile">Project Profile</span>
+              <select id="new-run-profile">
+                <option value="web">web</option>
+                <option value="fullstack">fullstack</option>
+                <option value="backend">backend</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-block hidden" id="new-run-data-dir-manual-block">
+            <span for="new-run-data-dir-manual">Absolute Workdir (.branchclaw)</span>
+            <input id="new-run-data-dir-manual" placeholder="/abs/path/.branchclaw">
+            <div class="field-note">Workdir must point directly to a <span class="mono">.branchclaw</span> folder, not its parent directory.</div>
+            <div id="new-run-data-dir-error" class="field-error hidden"></div>
+          </div>
+          <div class="drawer-grid">
+            <div class="field-block">
+              <span for="new-run-repo">Local Repo Path</span>
+              <input id="new-run-repo" placeholder="/abs/path/to/repo">
+            </div>
+            <div class="field-block">
+              <span for="new-run-name">Run Name</span>
+              <input id="new-run-name" placeholder="my-run">
+            </div>
+          </div>
+          <div class="drawer-grid">
+            <div class="field-block">
+              <span for="new-run-direction">Direction</span>
+              <textarea id="new-run-direction" placeholder="Long-lived direction for this run."></textarea>
+            </div>
+            <div class="field-block">
+              <span for="new-run-integration-ref">Integration Ref</span>
+              <input id="new-run-integration-ref" placeholder="branchclaw/my-run/integration">
+            </div>
+          </div>
+          <div class="field-block">
+            <span for="new-run-max-features">Max Active Features</span>
+            <input id="new-run-max-features" type="number" min="1" step="1" value="2">
+          </div>
+          <div class="field-block">
+            <span for="new-run-description">Description</span>
+            <textarea id="new-run-description" placeholder="Optional run description."></textarea>
+          </div>
+          <div class="field-block">
+            <span for="new-run-spec">Spec</span>
+            <textarea id="new-run-spec" placeholder="Shared spec for the run."></textarea>
+          </div>
+          <div class="field-block">
+            <span for="new-run-rules">Rules</span>
+            <textarea id="new-run-rules" placeholder="Shared rules and constraints."></textarea>
+          </div>
+          <div class="field-block">
+            <span for="new-run-plan">Initial Plan</span>
+            <textarea id="new-run-plan" placeholder="First planner proposal submitted after run creation."></textarea>
+          </div>
+          <div class="drawer-footer">
+            <button class="ghost" data-action="close-drawer" type="button">Cancel</button>
+            <button id="new-run-submit" type="submit">Create Run</button>
+          </div>
+        </form>
+        <form id="new-workspace-form" class="drawer-form hidden">
+          <div class="field-block">
+            <span for="new-workspace-context">Target</span>
+            <input id="new-workspace-context" readonly>
+          </div>
+          <div class="field-block">
+            <span for="new-workspace-feature-id">Feature ID</span>
+            <input id="new-workspace-feature-id" placeholder="Optional planner feature ID to attach.">
+          </div>
+          <div class="drawer-grid">
+            <div class="field-block">
+              <span for="new-workspace-name">Worker Name</span>
+              <input id="new-workspace-name" placeholder="worker-a">
+            </div>
+            <div class="field-block">
+              <span for="new-workspace-backend">Backend</span>
+              <select id="new-workspace-backend">
+                <option value="tmux">tmux</option>
+                <option value="subprocess">subprocess</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-block">
+            <span for="new-workspace-command">Command</span>
+            <input id="new-workspace-command" value="claude">
+          </div>
+          <div class="field-block">
+            <span for="new-workspace-task">Task</span>
+            <textarea id="new-workspace-task" placeholder="Describe the worktree goal for this worker."></textarea>
+          </div>
+          <label class="checkbox-row" for="new-workspace-skip-permissions">
+            <input id="new-workspace-skip-permissions" type="checkbox" checked>
+            Skip interactive permission prompts for the agent process
+          </label>
+          <div class="drawer-footer">
+            <button class="ghost" data-action="close-drawer" type="button">Cancel</button>
+            <button id="new-workspace-submit" type="submit">Add Worktree</button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </div>
+  <script src="/static/board.js"></script>
+</body>
+</html>

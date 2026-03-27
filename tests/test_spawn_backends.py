@@ -6,7 +6,12 @@ import sys
 
 from clawteam.spawn.cli_env import build_spawn_path, resolve_clawteam_executable
 from clawteam.spawn.subprocess_backend import SubprocessBackend
-from clawteam.spawn.tmux_backend import TmuxBackend, _confirm_workspace_trust_if_prompted
+from clawteam.spawn.tmux_backend import (
+    TmuxBackend,
+    _confirm_claude_theme_if_prompted,
+    _confirm_permission_bypass_if_prompted,
+    _confirm_workspace_trust_if_prompted,
+)
 
 
 class DummyProcess:
@@ -303,6 +308,68 @@ def test_tmux_backend_confirms_codex_workspace_trust_prompt(monkeypatch):
     monkeypatch.setattr("clawteam.spawn.tmux_backend.time.sleep", lambda *_: None)
 
     confirmed = _confirm_workspace_trust_if_prompted("demo:agent", ["codex"])
+
+    assert confirmed is True
+    assert ["tmux", "send-keys", "-t", "demo:agent", "Enter"] in run_calls
+
+
+def test_tmux_backend_confirms_claude_bypass_permissions_prompt(monkeypatch):
+    run_calls: list[list[str]] = []
+
+    class Result:
+        def __init__(self, returncode: int = 0, stdout: str = ""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(args, **kwargs):
+        run_calls.append(args)
+        if args[:4] == ["tmux", "capture-pane", "-p", "-t"]:
+            return Result(
+                stdout=(
+                    "WARNING: Claude Code running in Bypass Permissions mode\n"
+                    "1. No, exit\n"
+                    "2. Yes, I accept\n"
+                )
+            )
+        return Result()
+
+    monkeypatch.setattr("clawteam.spawn.tmux_backend.subprocess.run", fake_run)
+    monkeypatch.setattr("clawteam.spawn.tmux_backend.time.sleep", lambda *_: None)
+
+    confirmed = _confirm_permission_bypass_if_prompted("demo:agent", ["claude"])
+
+    assert confirmed is True
+    assert ["tmux", "send-keys", "-t", "demo:agent", "Down"] in run_calls
+    assert ["tmux", "send-keys", "-t", "demo:agent", "Enter"] in run_calls
+
+
+def test_tmux_backend_confirms_claude_theme_prompt(monkeypatch):
+    run_calls: list[list[str]] = []
+
+    class Result:
+        def __init__(self, returncode: int = 0, stdout: str = ""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(args, **kwargs):
+        run_calls.append(args)
+        if args[:4] == ["tmux", "capture-pane", "-p", "-t"]:
+            return Result(
+                stdout=(
+                    "Let's get started.\n"
+                    "Choose the text style that looks best with your terminal\n"
+                    "1. Dark mode\n"
+                    "2. Light mode\n"
+                )
+            )
+        return Result()
+
+    monkeypatch.setattr("clawteam.spawn.tmux_backend.subprocess.run", fake_run)
+    monkeypatch.setattr("clawteam.spawn.tmux_backend.time.sleep", lambda *_: None)
+
+    confirmed = _confirm_claude_theme_if_prompted("demo:agent", ["claude"])
 
     assert confirmed is True
     assert ["tmux", "send-keys", "-t", "demo:agent", "Enter"] in run_calls

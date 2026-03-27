@@ -1,0 +1,4 @@
+interface:
+  display_name: "Branch Agent Project Dev"
+  short_description: "Help with Branch Agent Project Dev tasks"
+  default_prompt: "Use $branch-agent-project-dev to guide project-type branch development and result reporting."

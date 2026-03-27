@@ -1,7 +1,7 @@
 [project]
-name = "clawteam"
-version = "0.1.2"
-description = "Framework-agnostic multi-agent coordination CLI"
+name = "branchclaw"
+version = "1.0.0a0"
+description = "Event-sourced single-container multi-workspace CLI agent coordination"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -22,6 +22,8 @@ dependencies = [
     "typer>=0.12.0,<1.0.0",
     "pydantic>=2.0.0,<3.0.0",
     "rich>=13.0.0,<15.0.0",
+    "mcp>=1.10.1,<2.0.0",
+    "uvicorn>=0.30.0,<1.0.0",
     "tomli>=2.0.0; python_version < '3.11'",
 ]
 
@@ -36,6 +38,7 @@ p2p = [
 
 [project.scripts]
 clawteam = "clawteam.cli.commands:app"
+branchclaw = "branchclaw.cli.commands:app"
 
 [project.urls]
 Homepage = "https://github.com/HKUDS/ClawTeam"
@@ -47,11 +50,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["clawteam"]
+packages = ["clawteam", "branchclaw"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "clawteam/",
+    "branchclaw/",
     "README.md",
     "LICENSE",
 ]

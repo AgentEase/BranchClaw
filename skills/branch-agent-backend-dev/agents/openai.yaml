@@ -1,0 +1,4 @@
+interface:
+  display_name: "Branch Agent Backend Dev"
+  short_description: "Help with Branch Agent Backend Dev tasks"
+  default_prompt: "Use $branch-agent-backend-dev to develop a backend-only branch and report the requested runtime output and architecture summary."

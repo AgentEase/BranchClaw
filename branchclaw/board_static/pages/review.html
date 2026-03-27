@@ -1,0 +1,98 @@
+        <section id="page-review" class="page-section">
+          <section class="panel">
+            <div id="review-page-header" class="run-home-hero"></div>
+          </section>
+          <div class="review-page-layout">
+            <section class="panel">
+              <div class="header">
+                <div class="header-copy">
+                  <h2>Review This Worktree</h2>
+                  <p class="hint" id="review-context-line">Open a worktree from the graph to inspect its outcome, evidence, and next action.</p>
+                </div>
+              </div>
+              <div id="review-panel"></div>
+            </section>
+            <aside class="panel approval-rail">
+              <div class="header">
+                <div class="header-copy">
+                  <h2>Pending Decisions</h2>
+                  <p class="hint" id="approval-context-line">Decisions related to the selected worktree appear first.</p>
+                </div>
+              </div>
+              <div class="approval-controls">
+                <div class="field-block">
+                  <span for="approval-feedback-default">Default Feedback</span>
+                  <textarea id="approval-feedback-default" placeholder="Optional feedback used if a decision card leaves its feedback blank."></textarea>
+                </div>
+              </div>
+              <div id="approvals-panel" class="approval-list"></div>
+            </aside>
+          </div>
+          <section class="panel">
+            <div class="review-subnav">
+              <button class="subtab active" data-action="show-review-tab" data-tab="activity" type="button">Activity</button>
+              <button class="subtab" data-action="show-review-tab" data-tab="archives" type="button">Archives</button>
+              <button class="subtab" data-action="show-review-tab" data-tab="events" type="button">Events</button>
+              <button class="subtab" data-action="show-review-tab" data-tab="run-details" type="button">Run Details</button>
+            </div>
+            <div id="review-tab-activity" class="review-tab-panel">
+              <div class="review-tab-layout">
+                <section class="panel subtle-panel">
+                  <h2>Activity</h2>
+                  <div id="selected-detail-panel"></div>
+                </section>
+                <section class="panel subtle-panel">
+                  <h2>Workers</h2>
+                  <div id="workers-panel"></div>
+                </section>
+              </div>
+            </div>
+            <div id="review-tab-archives" class="review-tab-panel hidden">
+              <section class="panel subtle-panel">
+                <div class="header">
+                  <div class="header-copy">
+                    <h2>Archives</h2>
+                    <p class="hint">Snapshots and restore points for worktrees in this run.</p>
+                  </div>
+                  <div class="actions">
+                    <button id="archive-button" data-action="archive" type="button">Create Archive</button>
+                  </div>
+                </div>
+                <div id="archives-panel"></div>
+              </section>
+            </div>
+            <div id="review-tab-events" class="review-tab-panel hidden">
+              <section class="panel subtle-panel">
+                <div class="header">
+                  <div class="header-copy">
+                    <h2>Events</h2>
+                    <p class="hint">Readable timeline for the selected worktree by default, with a run-wide fallback.</p>
+                  </div>
+                  <div class="event-toolbar">
+                    <button id="events-node-filter" class="active-toggle" data-action="events-node" type="button">Worktree Scope</button>
+                    <button id="events-run-filter" class="subtle" data-action="events-run" type="button">Run Scope</button>
+                    <button id="events-level-all" class="active-toggle" data-action="set-events-level" data-level="all" type="button">All</button>
+                    <button id="events-level-info" class="subtle" data-action="set-events-level" data-level="info" type="button">Info</button>
+                    <button id="events-level-warning" class="subtle" data-action="set-events-level" data-level="warning" type="button">Warning</button>
+                    <button id="events-level-error" class="subtle" data-action="set-events-level" data-level="error" type="button">Error</button>
+                  </div>
+                </div>
+                <div class="event-scroller">
+                  <div id="events-panel"></div>
+                </div>
+              </section>
+            </div>
+            <div id="review-tab-run-details" class="review-tab-panel hidden">
+              <div class="review-tab-layout">
+                <section class="panel subtle-panel">
+                  <h2>Run Details</h2>
+                  <div id="run-overview" class="kv"></div>
+                </section>
+                <section class="panel subtle-panel">
+                  <h2>Constraints</h2>
+                  <div id="constraints-panel"></div>
+                </section>
+              </div>
+            </div>
+          </section>
+        </section>

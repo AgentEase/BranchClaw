@@ -1,0 +1,46 @@
+        <section id="page-control-plane" class="page-section">
+          <div class="control-layout">
+            <div class="control-side">
+              <section class="panel">
+                <div class="header">
+                  <div class="header-copy">
+                    <h2>Control Plane</h2>
+                    <p class="hint">Daemon health, tracked workdirs, managed processes, and cross-run intervention triage.</p>
+                  </div>
+                </div>
+                <div id="daemon-overview" class="kv"></div>
+              </section>
+              <section class="panel">
+                <div class="header">
+                  <div class="header-copy">
+                    <h2>Intervention Queue</h2>
+                    <p class="hint" id="intervention-context-line">Selected-run interventions first, with daemon-wide runs needing attention alongside them.</p>
+                  </div>
+                  <div class="actions">
+                    <button class="ghost" id="intervention-reconcile-button" data-action="reconcile" type="button">Reconcile Run</button>
+                  </div>
+                </div>
+                <div id="interventions-panel" class="intervention-list"></div>
+              </section>
+              <section class="panel">
+                <div class="header">
+                  <div class="header-copy">
+                    <h2>Runs Needing Attention</h2>
+                    <p class="hint">Pick a run here to jump back into its worktree page.</p>
+                  </div>
+                </div>
+                <div id="intervention-runs-panel"></div>
+              </section>
+            </div>
+            <div class="control-side">
+              <section class="panel">
+                <h2>Tracked Workdirs</h2>
+                <div id="data-dirs-panel"></div>
+              </section>
+              <section class="panel">
+                <h2>Managed Processes</h2>
+                <div id="processes-panel"></div>
+              </section>
+            </div>
+          </div>
+        </section>

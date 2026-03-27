@@ -140,6 +140,8 @@ class TmuxBackend(SpawnBackend):
                 "Verify the CLI works standalone before using it with clawteam spawn."
             )
 
+        _confirm_permission_bypass_if_prompted(target, normalized_command)
+        _confirm_claude_theme_if_prompted(target, normalized_command)
         _confirm_workspace_trust_if_prompted(target, normalized_command)
 
         # Send the prompt as input to the interactive claude session
@@ -342,6 +344,98 @@ def _confirm_workspace_trust_if_prompted(
     return False
 
 
+def _confirm_permission_bypass_if_prompted(
+    target: str,
+    command: list[str],
+    timeout_seconds: float = 5.0,
+    poll_interval_seconds: float = 0.5,
+) -> bool:
+    """Acknowledge Claude Code bypass-permissions confirmation screens."""
+    if not is_claude_command(command):
+        return False
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        pane = subprocess.run(
+            ["tmux", "capture-pane", "-p", "-t", target],
+            capture_output=True,
+            text=True,
+        )
+        pane_text = pane.stdout.lower() if pane.returncode == 0 else ""
+        if _looks_like_permission_bypass_prompt(command, pane_text):
+            subprocess.run(
+                ["tmux", "send-keys", "-t", target, "Down"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            time.sleep(0.2)
+            subprocess.run(
+                ["tmux", "send-keys", "-t", target, "Enter"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            time.sleep(1.0)
+            return True
+
+        time.sleep(poll_interval_seconds)
+
+    return False
+
+
+def _confirm_claude_theme_if_prompted(
+    target: str,
+    command: list[str],
+    timeout_seconds: float = 5.0,
+    poll_interval_seconds: float = 0.5,
+) -> bool:
+    """Accept Claude's first-run theme selection with the default option."""
+    if not is_claude_command(command):
+        return False
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        pane = subprocess.run(
+            ["tmux", "capture-pane", "-p", "-t", target],
+            capture_output=True,
+            text=True,
+        )
+        pane_text = pane.stdout.lower() if pane.returncode == 0 else ""
+        if _looks_like_claude_theme_prompt(command, pane_text):
+            subprocess.run(
+                ["tmux", "send-keys", "-t", target, "Enter"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            time.sleep(1.0)
+            return True
+
+        time.sleep(poll_interval_seconds)
+
+    return False
+
+
+def _looks_like_permission_bypass_prompt(command: list[str], pane_text: str) -> bool:
+    """Return True when Claude is waiting on the bypass-permissions warning screen."""
+    if not pane_text or not is_claude_command(command):
+        return False
+    return (
+        "bypass permissions mode" in pane_text
+        and "yes, i accept" in pane_text
+        and "no, exit" in pane_text
+    )
+
+
+def _looks_like_claude_theme_prompt(command: list[str], pane_text: str) -> bool:
+    """Return True when Claude is waiting on the first-run theme picker."""
+    if not pane_text or not is_claude_command(command):
+        return False
+    return (
+        "choose the text style that looks best with your terminal" in pane_text
+        and "dark mode" in pane_text
+        and "light mode" in pane_text
+    )
+
+
 def _looks_like_workspace_trust_prompt(command: list[str], pane_text: str) -> bool:
     """Return True when the tmux pane is showing a trust confirmation dialog."""
     if not pane_text:
@@ -387,6 +481,13 @@ def _wait_for_claude_ready(
         )
         if pane.returncode == 0:
             text = pane.stdout
+            text_lower = text.lower()
+            if (
+                "browser didn't open? use the url below to sign in" in text_lower
+                or "paste code here if prompted" in text_lower
+                or "oauth/authorize" in text_lower
+            ):
+                return False
             lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
             tail = lines[-10:] if len(lines) >= 10 else lines
             for line in tail:

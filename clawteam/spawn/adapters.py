@@ -15,6 +15,7 @@ class PreparedCommand:
     normalized_command: list[str]
     final_command: list[str]
     post_launch_prompt: str | None = None
+    appended_system_prompt: str | None = None
 
 
 class NativeCliAdapter:
@@ -25,13 +26,22 @@ class NativeCliAdapter:
         command: list[str],
         *,
         prompt: str | None = None,
+        system_prompt: str | None = None,
         cwd: str | None = None,
         skip_permissions: bool = False,
         interactive: bool = False,
+        session_args: list[str] | None = None,
     ) -> PreparedCommand:
         normalized_command = normalize_spawn_command(command)
         final_command = list(normalized_command)
+        if session_args:
+            final_command.extend(session_args)
         post_launch_prompt = None
+        appended_system_prompt = None
+
+        if system_prompt and is_claude_command(normalized_command):
+            final_command.extend(["--append-system-prompt", system_prompt])
+            appended_system_prompt = system_prompt
 
         if skip_permissions:
             if is_claude_command(normalized_command):
@@ -65,6 +75,7 @@ class NativeCliAdapter:
             normalized_command=normalized_command,
             final_command=final_command,
             post_launch_prompt=post_launch_prompt,
+            appended_system_prompt=appended_system_prompt,
         )
 
 

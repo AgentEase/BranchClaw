@@ -1,0 +1,47 @@
+        <section id="page-workspace" class="page-section">
+          <section class="panel">
+            <div id="run-home-header" class="run-home-hero"></div>
+          </section>
+          <section class="panel workspace-hero-panel">
+            <div class="header">
+              <div class="header-copy">
+                <h2>Worktree Master</h2>
+                <p class="hint" id="worktree-summary">Follow the active worktree graph, then open one worktree to review it in detail.</p>
+              </div>
+              <div class="actions">
+                <button id="new-workspace-button" data-action="open-new-workspace" type="button">Add Worktree</button>
+                <button class="ghost" id="reconcile-button" data-action="reconcile" type="button">Reconcile Run</button>
+              </div>
+            </div>
+            <div id="worktree-panel" class="tree-master"></div>
+          </section>
+          <div class="support-grid workspace-feed">
+            <section class="panel">
+              <div class="header">
+                <div class="header-copy">
+                  <h2>Feature Queue</h2>
+                  <p class="hint">Queued, active, ready, and blocked feature work for this run.</p>
+                </div>
+              </div>
+              <div id="feature-queue-panel"></div>
+            </section>
+            <section class="panel">
+              <div class="header">
+                <div class="header-copy">
+                  <h2>Batch Review</h2>
+                  <p class="hint">Reviewable batches, integration state, and promote-ready work.</p>
+                </div>
+              </div>
+              <div id="batch-review-panel"></div>
+            </section>
+          </div>
+          <section id="run-interventions-panel" class="panel hidden">
+            <div class="header">
+              <div class="header-copy">
+                <h2>Needs Attention</h2>
+                <p class="hint" id="run-interventions-context">Open interventions on this run are surfaced here so you can recover the flow before the next batch review.</p>
+              </div>
+            </div>
+            <div id="run-interventions-list" class="attention-strip"></div>
+          </section>
+        </section>

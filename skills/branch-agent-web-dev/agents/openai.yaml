@@ -1,0 +1,4 @@
+interface:
+  display_name: "Branch Agent Web Dev"
+  short_description: "Help with Branch Agent Web Dev tasks"
+  default_prompt: "Use $branch-agent-web-dev to develop or iterate on a web-only project branch and report the preview result."

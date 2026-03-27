@@ -1,0 +1,4 @@
+interface:
+  display_name: "Branch Agent Fullstack Dev"
+  short_description: "Help with Branch Agent Fullstack Dev tasks"
+  default_prompt: "Use $branch-agent-fullstack-dev to develop a fullstack branch and report both frontend and backend runtime results."
