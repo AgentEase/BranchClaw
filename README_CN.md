@@ -1,14 +1,14 @@
-<h1 align="center"><img src="assets/icon.png" alt="" width="64" style="vertical-align: middle;">&nbsp; ClawTeam：Agent 群体智能</h1>
+<h1 align="center"><img src="assets/icon.png" alt="" width="64" style="vertical-align: middle;">&nbsp; BranchClaw：Git 优先的 Agent 工作空间</h1>
 
 <p align="center">
-  <strong>今天的 Agent 各自为战 🤖，明天的 Agent 将协同作战 🦞🤖🤖🤖<br>
-  ClawTeam：让 AI Agent 自主组建团队、分配任务、协同工作的 CLI 工具</strong>
+  <strong>从一次性 Worker 到长期软件迭代 🚀<br>
+  BranchClaw 把一个仓库变成 planner 驱动的长期 Run、隔离的 Git Worktree、可评审的 Feature，以及批量集成合并流程</strong>
 </p>
 
 <p align="center">
-  <a href="#-快速开始"><img src="https://img.shields.io/badge/快速开始-3_分钟-blue?style=for-the-badge" alt="Quick Start"></a>
+  <a href="#-快速开始"><img src="https://img.shields.io/badge/快速开始-5_分钟-blue?style=for-the-badge" alt="Quick Start"></a>
   <a href="#-使用场景"><img src="https://img.shields.io/badge/使用场景-3_个演示-green?style=for-the-badge" alt="Use Cases"></a>
-  <a href="#-功能特性"><img src="https://img.shields.io/badge/功能-12+-purple?style=for-the-badge" alt="Features"></a>
+  <a href="#-核心特性"><img src="https://img.shields.io/badge/特性-Worktree_%7C_Feature_%7C_Batch-purple?style=for-the-badge" alt="Features"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/开源协议-MIT-yellow?style=for-the-badge" alt="License"></a>
 </p>
 
@@ -16,15 +16,20 @@
   <img src="https://img.shields.io/badge/python-≥3.10-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/typer-CLI-green" alt="Typer">
   <img src="https://img.shields.io/badge/agents-Claude_Code_%7C_Codex_%7C_Any_CLI-blueviolet" alt="Agents">
-  <img src="https://img.shields.io/badge/transport-File_%7C_ZeroMQ_P2P-orange" alt="Transport">
-  <a href="https://github.com/HKUDS/.github/blob/main/profile/README.md"><img src="https://img.shields.io/badge/飞书-交流群-E9DBFC?style=flat&logo=feishu&logoColor=white" alt="Feishu"></a>
-  <a href="https://github.com/HKUDS/.github/blob/main/profile/README.md"><img src="https://img.shields.io/badge/微信-交流群-C5EAB4?style=flat&logo=wechat&logoColor=white" alt="WeChat"></a>
+  <img src="https://img.shields.io/badge/runtime-Daemon_%7C_Git_Worktrees_%7C_MCP-orange" alt="Runtime">
+  <img src="https://img.shields.io/badge/dashboard-Workspace_%7C_Review_%7C_Control_Plane-0f766e" alt="Dashboard">
 </p>
 
-**一行命令**：给 Agent 一个目标，它自动组建团队完成任务。支持 [Claude Code](https://claude.ai/claude-code)、[Codex](https://openai.com/codex)、[OpenClaw](https://github.com/openclaw/openclaw)、[nanobot](https://github.com/HKUDS/nanobot)、[Cursor](https://cursor.com) 及任意 CLI Agent。&nbsp;&nbsp;[**English**](README.md)
+**一个仓库。一个方向。持续迭代。**  
+BranchClaw 是这个仓库里的主产品。它为每个仓库和方向维护一个长期 `Run`，让 planner 把方向拆成
+`Feature` 队列，把不冲突的工作自动派发到隔离的 Git Worktree，并把 ready 的结果整理成 `Batch`
+之后再进入集成分支与 promote 流程。
+
+legacy `clawteam` 仍然保留用于兼容和迁移，但新的工作流应默认从 BranchClaw 开始。  
+[**English**](README.md) | [**概念文档**](docs/branchclaw-concepts.md) | [**操作 Runbook**](docs/branchclaw-runbook.md) | [**Three.js 人工 E2E**](docs/branchclaw-manual-e2e-threejs.md)
 
 <p align="center">
-  <img src="assets/teaser.png" alt="ClawTeam - Agent 群体智能" width="800">
+  <img src="assets/teaser.png" alt="BranchClaw - Git 优先的 Agent 工作空间" width="800">
 </p>
 
 ---
@@ -38,72 +43,89 @@
   <a href="https://github.com/user-attachments/assets/7e2f0ecd-8fe3-4970-90ac-5c9669ff060c">直接打开演示视频</a>
 </p>
 
-*☝️ 一个 Leader Claude Agent 在 8 块 H100 GPU 上自主创建 8 个子 Agent，分配实验方向，监控进度，交叉融合发现，并及时纠正无效方向 —— 全程无人干预。*
+☝️ 在 BranchClaw 中，操作者给定一个仓库和方向，planner 持续维护 feature backlog，每个 worker
+只负责一个 Git worktree，人工只在决策、人工介入和 batch promote 时进入回路。
 
 ---
 
-## ✨ 核心场景
+## ✨ 核心特性
 
 <table align="center" width="100%">
 <tr>
 <td width="25%" align="center" style="vertical-align: top; padding: 15px;">
 
-<h3>🔬 自主 ML 研究</h3>
+<h3>🌳 Worktree 优先执行</h3>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/AutoResearch-FF6B6B?style=for-the-badge&logo=pytorch&logoColor=white" alt="AutoResearch" />
-</div>
-
-<img src="assets/scene-autoresearch.png" width="180">
-
-<p align="center"><strong>多 GPU 实验群体</strong></p>
-
-<p align="center">8 Agent × 8 H100 自主优化 LLM 训练：2430+ 实验，val_bpb 1.044→0.977</p>
-
-</td>
-<td width="25%" align="center" style="vertical-align: top; padding: 15px;">
-
-<h3>🏗️ Agent 软件工程</h3>
-
-<div align="center">
-  <img src="https://img.shields.io/badge/全栈开发-4ECDC4?style=for-the-badge&logo=git&logoColor=white" alt="Engineering" />
+  <img src="https://img.shields.io/badge/Git_Worktrees-Isolated-FF6B6B?style=for-the-badge&logo=git&logoColor=white" alt="Worktrees" />
 </div>
 
 <img src="assets/scene-engineering.png" width="180">
 
-<p align="center"><strong>并行软件开发</strong></p>
+<p align="center"><strong>• 一个 worker 对应一个隔离 Git worktree</strong></p>
 
-<p align="center">Agent 自动拆分为 API、后端、前端、测试 —— 各自独立分支，完成后自动合并</p>
+<p align="center"><strong>• 分支、运行态和结果都保持可评审</strong></p>
 
-</td>
-<td width="25%" align="center" style="vertical-align: top; padding: 15px;">
+<p align="center"><strong>• archive / restore 仍是一等恢复工具</strong></p>
 
-<h3>💰 AI 对冲基金</h3>
-
-<div align="center">
-  <img src="https://img.shields.io/badge/投资分析-FFD93D?style=for-the-badge&logo=bitcoin&logoColor=black" alt="Hedge Fund" />
-</div>
-
-<img src="assets/scene-hedgefund.png" width="180">
-
-<p align="center"><strong>多分析师信号融合</strong></p>
-
-<p align="center">7 个分析师 Agent（价值、成长、技术、基本面、情绪）+ 风控经理收敛投资决策</p>
+<p align="center"><strong>• worktree graph 是主产品界面</strong></p>
 
 </td>
 <td width="25%" align="center" style="vertical-align: top; padding: 15px;">
 
-<h3>🎪 自定义群体</h3>
+<h3>📋 Planner 持有 backlog</h3>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/TOML_模板-C77DFF?style=for-the-badge&logo=toml&logoColor=white" alt="Templates" />
+  <img src="https://img.shields.io/badge/Feature_Queue-Backlog-4ECDC4?style=for-the-badge&logo=buffer&logoColor=white" alt="Feature Queue" />
 </div>
 
 <img src="assets/scene-template.png" width="180">
 
-<p align="center"><strong>一键启动团队</strong></p>
+<p align="center"><strong>• 一个仓库/方向对应一个长期 Run</strong></p>
 
-<p align="center">用 TOML 模板定义任意团队原型 —— 角色、任务、提示词 —— 一条命令 <code>clawteam launch</code> 启动</p>
+<p align="center"><strong>• planner 把计划文本变成显式 FeatureRecord</strong></p>
+
+<p align="center"><strong>• areas / files claim 防止活跃冲突</strong></p>
+
+<p align="center"><strong>• daemon 按并发上限自动派发 feature</strong></p>
+
+</td>
+<td width="25%" align="center" style="vertical-align: top; padding: 15px;">
+
+<h3>🧪 Batch 评审与 Promote</h3>
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Integration_Branch-Validated-FFD93D?style=for-the-badge&logo=githubactions&logoColor=black" alt="Batch Review" />
+</div>
+
+<img src="assets/scene-autoresearch.png" width="180">
+
+<p align="center"><strong>• ready feature 会被组成可评审 batch</strong></p>
+
+<p align="center"><strong>• merge 先进入 <code>integration_ref</code>，不是主分支</strong></p>
+
+<p align="center"><strong>• integration 验证通过后再单独 promote</strong></p>
+
+<p align="center"><strong>• integration 失败会把 feature 退回 ready 并附带 blocker</strong></p>
+
+</td>
+<td width="25%" align="center" style="vertical-align: top; padding: 15px;">
+
+<h3>🖥️ Daemon Dashboard</h3>
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Workspace_UI-Worktree_First-C77DFF?style=for-the-badge&logo=vercel&logoColor=white" alt="Dashboard" />
+</div>
+
+<img src="assets/scene-hedgefund.png" width="180">
+
+<p align="center"><strong>• Picker、Workspace、Review、Control Plane</strong></p>
+
+<p align="center"><strong>• graph 下直接看到 feature queue 和 batch review</strong></p>
+
+<p align="center"><strong>• rescue loop 预算耗尽后进入 intervention queue</strong></p>
+
+<p align="center"><strong>• CLI、SSE 和 dashboard 共用同一份 projection</strong></p>
 
 </td>
 </tr>
@@ -111,411 +133,202 @@
 
 ---
 
-## 🤔 为什么需要 ClawTeam？
+## 🤔 为什么需要 BranchClaw？
 
-AI 编程 Agent 很强大 —— 但它们**各自为战**。当任务太大时，你只能手动拆分工作、复制粘贴上下文、合并结果。
+今天很多 Agent 工作流仍然像一次性编排：拉起几个 worker，祈祷它们不要冲突，然后人工收拾残局。
 
-**如果 Agent 能自己组队呢？**
+**BranchClaw 改变的是控制单位。**
 
-ClawTeam 实现了 **Agent 群体智能（Swarm Intelligence）**—— Agent 自主组建团队、分工协作、共享发现、收敛到最优方案。一个 Leader Agent 可以：
+它不再是“一个提示词、一个 worker、一次合并”，而是：
 
-- 🚀 **创建子 Agent** —— 每个子 Agent 拥有独立的 Git Worktree 和 tmux 会话
-- 📋 **分配任务** —— 支持依赖链，完成时自动解除下游阻塞
-- 💬 **发送消息** —— 向任意子 Agent 发送指令
-- 📊 **监控进度** —— 查看看板、读取实验结果
-- 🔄 **调整方向** —— 终止低效 Agent，用新方向重新分配
+- 一个长期 `Run` 对应一个仓库和方向
+- 一个 `Feature` 对应一个 worker/worktree
+- 一个 `Batch` 对应一次评审和集成
+- 一个 `integration_ref` 先于主分支
 
-人类只需提供初始目标，**群体智能完成剩下的一切。**
+因此你会得到：
+
+- 🚀 **隔离执行**：每个 worker 拥有真实 Git worktree 和分支
+- 📋 **planner 持有 backlog**：feature queue、优先级、claim 和 dispatch 全都显式
+- 👀 **worktree-first 评审**：dashboard 和 CLI 都围绕同一份 worktree graph
+- 🧯 **运行时可靠性**：当 rescue loop 预算耗尽时进入 intervention queue
+- 🔄 **更安全的集成**：先合到 integration，再独立 promote
+
+#### ✨ 结果是什么？
+你负责设定方向，BranchClaw 负责让 run 持续推进，而你只在 batch 边界做判断。
 
 <p align="center">
-  <img src="assets/comic-how-it-works.png" alt="ClawTeam 工作流程" width="700">
+  <img src="assets/comic-how-it-works.png" alt="BranchClaw 工作流程：planner、worktree、feature queue、batch review" width="700">
 </p>
 
 ---
 
-## 🎯 群体智能的优势
+## 🎯 产品循环
 
 <table>
 <tr>
-<td width="33%" valign="top">
+<td width="33%">
 
-### 🦞 Agent 创建 Agent
-Leader Agent 调用 `clawteam spawn` 创建 Worker。每个 Worker 自动获得独立的 **Git Worktree**、**tmux 窗口**和**身份标识**。
+### 🌱 创建长期 Run
+操作者先为一个仓库和一个方向创建长期 Run。Run 会保存共享 spec、rules、集成分支和自动派发并发上限。
 
 ```bash
-# Leader Agent 执行：
-clawteam spawn --team my-team \
-  --agent-name worker1 \
-  --task "实现认证模块"
+branchclaw daemon start
+branchclaw run create website \
+  --repo . \
+  --direction "Improve onboarding" \
+  --integration-ref branchclaw/website/integration \
+  --max-active-features 2
 ```
 
 </td>
-<td width="33%" valign="top">
+<td width="33%">
 
-### 🤖 Agent 之间对话
-Worker 检查收件箱、更新任务状态、汇报结果 —— 全部通过 CLI 命令，启动时**自动注入**协作提示词。
+### 🧠 Planner 把方向变成 Feature
+plan approval 不再只是一次性 worker bundle。planner 可以声明显式 feature block，BranchClaw 会把它们转成带 area/file claim 的 backlog 记录。
 
 ```bash
-# Worker Agent 检查任务：
-clawteam task list my-team --owner me
-# 汇报结果：
-clawteam inbox send my-team leader \
-  "认证模块完成，全部测试通过。"
+branchclaw planner propose "$RUN_ID" "
+## Feature: Hero Polish
+Areas: ui, hero
+Priority: 10
+"
+branchclaw planner approve "$RUN_ID" "$PLAN_GATE"
 ```
 
 </td>
-<td width="33%" valign="top">
+<td width="33%">
 
-### 👀 你只需观看
-通过 tmux 平铺视图或 Web UI 监控群体工作。Leader 负责协调 —— 你只在需要时介入。
+### 📦 评审 Batch，而不是 Worker 混乱
+worker 结果会汇入同一份 projection。ready feature 会组成 batch 供评审，先合到 integration 分支，通过验证后再 promote 到主分支。
 
 ```bash
-# 同时观看所有 Agent
-clawteam board attach my-team
-# 或打开 Web 仪表板
-clawteam board serve --port 8080
+branchclaw batch list "$RUN_ID"
+branchclaw run merge-request "$RUN_ID" --batch-id <batch-id>
+branchclaw run promote-request "$RUN_ID" --batch-id <batch-id>
 ```
 
 </td>
 </tr>
 </table>
 
-| | ClawTeam | 其他多 Agent 框架 |
-|---|---------|-----------------|
-| 🎯 **使用者** | **AI Agent 自身** | 人类编写编排代码 |
-| ⚡ **搭建** | `pip install` + 一句提示词 | Docker、云 API、YAML 配置 |
-| 🏗️ **基础设施** | 文件系统 + tmux 即可 | Redis、消息队列、数据库 |
-| 🤖 **Agent 支持** | 任意 CLI Agent（Claude Code、Codex、OpenClaw 等） | 仅限特定框架 |
-| 🌳 **隔离机制** | Git Worktree（真实分支、真实 diff） | 容器或虚拟环境 |
-| 🧠 **协调方式** | 群体自组织 CLI 命令 | 硬编码编排逻辑 |
-
----
-
-## 🎬 使用场景
-
-### 🔬 1. 自主 ML 研究 — 8 Agent × 8 块 H100 GPU
-
-基于 [@karpathy 的 autoresearch](https://github.com/karpathy/autoresearch)。人类告诉 Leader Agent：*"用 8 块 GPU 优化这个 LLM 训练配置。"* **Leader 自主完成所有工作。**
-
-<p align="center">
-  <img src="assets/autoresearch-progress.png" alt="AutoResearch 实验进展" width="720">
-  <br>
-  <em>🏆 val_bpb: 1.044 → 0.977（提升 6.4%）| 2430+ 实验 | ~30 GPU 小时</em>
-</p>
-
-**Leader Agent 自主完成的操作：**
-
-```
-人类提示词："用 8 块 GPU 优化 train.py，阅读 program.md 了解规则。"
-
-🦞 Leader Agent 的行动：
-├── 📖 阅读 program.md，理解实验协议
-├── 🏗️ clawteam team spawn-team autoresearch
-├── 🚀 为每块 GPU 分配研究方向：
-│   ├── GPU 0: clawteam spawn --task "探索模型深度（DEPTH 10-16）"
-│   ├── GPU 1: clawteam spawn --task "探索模型宽度（ASPECT_RATIO 80-128）"
-│   ├── GPU 2: clawteam spawn --task "调优学习率和优化器"
-│   ├── GPU 3: clawteam spawn --task "探索批量大小"
-│   ├── GPU 4-7: clawteam spawn tmux codex --task "..."（Codex Agent）
-│   └── 🌳 每个 Agent 独立的 Git Worktree 和分支
-├── 🔄 每 30 分钟检查进展：
-│   ├── clawteam board show autoresearch
-│   ├── 读取每个 Agent 的 results.tsv
-│   ├── 🏆 识别最佳发现（depth=12、batch=2^17、norm-before-RoPE）
-│   └── 📡 交叉融合：让新 Agent 从最佳配置开始
-├── 🔧 Agent 完成后重新分配 GPU：
-│   ├── 终止空闲 Agent，清理工作区
-│   ├── 从最佳 commit 创建新的 Worktree
-│   └── 用组合优化方向创建新 Agent
-└── ✅ 2430+ 实验后：val_bpb 1.044 → 0.977
-```
-
-完整结果：[novix-science/autoresearch](https://github.com/novix-science/autoresearch)
-
----
-
-### 🏗️ 2. 大规模 Agent 软件工程
-
-你告诉 Claude Code：*"帮我做一个全栈 Todo 应用。"* Claude 判断这是多模块任务，**自主组建团队**：
-
-```
-人类提示词："做一个全栈 Todo 应用，包含认证、数据库和 React 前端。"
-
-🦞 Leader Agent 的行动：
-├── 🏗️ clawteam team spawn-team webapp -d "全栈 Todo 应用"
-├── 📋 创建带依赖链的任务：
-│   ├── T1: "设计 REST API 接口"          → architect
-│   ├── T2: "实现 JWT 认证" --blocked-by T1  → backend1
-│   ├── T3: "构建数据库层" --blocked-by T1   → backend2
-│   ├── T4: "构建 React 前端"             → frontend
-│   └── T5: "集成测试" --blocked-by T2,T3,T4 → tester
-├── 🚀 创建 5 个子 Agent（各自独立 Git Worktree）
-├── 🔗 依赖自动解除：
-│   ├── architect 完成 → backend1 和 backend2 自动解除阻塞
-│   └── 所有后端完成 → tester 自动开始
-├── 💬 子 Agent 通过收件箱协调：
-│   ├── architect → backend1: "API 接口规范在这..."
-│   ├── backend1 → tester: "认证端点已就绪 /api/auth/*"
-│   └── tester → leader: "全部 47 个测试通过 ✅"
-└── 🌳 Leader 将所有 Worktree 合并回主分支
-```
-
----
-
-### 💰 3. AI 对冲基金 — 一键启动团队
-
-预置的 TOML 模板一键创建 **7 Agent** 投资分析团队：
-
-```bash
-# 一条命令启动完整团队：
-clawteam launch hedge-fund --team fund1 --goal "分析 AAPL、MSFT、NVDA 的 Q2 2026 投资价值"
-```
-
-```
-🦞 自动发生的事情：
-├── 📊 投资组合经理（Leader）启动并接收目标
-├── 🤖 5 个分析师 Agent 启动，各有不同策略：
-│   ├── 🎩 巴菲特分析师 → 价值投资（护城河、ROE、DCF）
-│   ├── 🚀 成长分析师   → 颠覆潜力（TAM、网络效应）
-│   ├── 📈 技术分析师   → 技术指标（EMA、RSI、布林带）
-│   ├── 📋 基本面分析师 → 财务比率（P/E、D/E、FCF）
-│   └── 📰 情绪分析师   → 新闻 + 内部交易信号
-├── 🛡️ 风险经理汇总所有信号，计算仓位限制
-└── 💼 投资组合经理做出最终买入/卖出/持有决策
-```
-
----
-
-## 📦 安装
-
-```bash
-pip install clawteam
-
-# 或从源码安装
-git clone https://github.com/HKUDS/ClawTeam.git
-cd ClawTeam
-pip install -e .
-
-# 可选：P2P 传输（ZeroMQ）
-pip install -e ".[p2p]"
-```
-
-需要 **Python 3.10+**。依赖：`typer`、`pydantic`、`rich`。
-
-下面所有 `spawn` 示例都默认你填写的 agent CLI 已经安装好，并且在 `PATH` 里可以直接运行。
+| | BranchClaw | Legacy ClawTeam | 通用 Agent Runner |
+|---|-----------|-----------------|-------------------|
+| 🎯 **主对象** | **Run → Worktree → Feature → Batch** | Team → Task → Inbox | Prompt / process |
+| ⚡ **执行模型** | 长期 Run + planner backlog | Leader 驱动的 swarm 协作 | 临时拉起 worker |
+| 🌳 **隔离** | 真实 Git worktree 与分支 | 真实 Git worktree 与分支 | 不一定 |
+| 🧠 **评审单位** | Batch 先入 integration，再 promote | 通常是 task/result 级 | 通常逐 worker |
+| 🧯 **恢复方式** | Intervention queue + restart/reconcile/archive | Inbox/task repair | 各工具自定义 |
+| 🖥️ **界面** | Worktree-first 的 Agent Workspace | Team/task board | 不一定 |
 
 ---
 
 ## 🚀 快速开始
 
-如果你是第一次用 ClawTeam，建议按这个顺序：
-
-1. 先确认 `tmux` 和你的 agent CLI 本机能单独跑起来。
-2. 选一条路径：让 agent 驱动，或者你自己手动驱动。
-3. 根据下面的支持表，选择正确的 `spawn` 命令。
-4. 如果你接的是新 agent，先看兼容要求，再去排查问题。
-
-### ✅ 开始前先确认
-
-先跑这几个检查：
+安装依赖并启动 daemon：
 
 ```bash
-tmux -V
-clawteam --help
-
-# 把 claude 换成你实际要用的 agent：
-claude --version
-codex --version
-nanobot --help
+uv sync --extra dev
+uv run branchclaw daemon start
+uv run branchclaw daemon status
 ```
 
-如果 agent CLI 自己都跑不起来，`clawteam spawn` 也不会帮你修好它。
-
-### ⚡ 方式一：让 Agent 驱动（推荐）
-
-ClawTeam 内置 **Claude Code 技能**，安装后自动激活。直接告诉你的 Agent：
-
-```
-"帮我做一个 Web 应用。用 clawteam 把工作拆分给多个 Agent。"
-```
-
-Agent 会自动使用 `clawteam` 命令创建团队、启动 Worker、分配任务、协调工作。
-
-### 🔧 方式二：手动操作
+创建一个长期 Run：
 
 ```bash
-# 1. 创建团队
-clawteam team spawn-team my-team -d "构建认证模块" -n leader
+RUN_JSON=$(uv run branchclaw --json run create website \
+  --repo . \
+  --project-profile web \
+  --direction "Improve onboarding and shipping confidence" \
+  --integration-ref branchclaw/website/integration \
+  --max-active-features 2 \
+  --spec "Continuously ship reviewable improvements to the website." \
+  --rules "Keep changes isolated, preserve a working build, and report blockers early.")
 
-# 2. 启动 Worker Agent —— 每个自动获得 Git Worktree、tmux 窗口和身份
-clawteam spawn --team my-team --agent-name alice --task "实现 OAuth2 流程"
-clawteam spawn --team my-team --agent-name bob   --task "编写认证单元测试"
-
-# 3. Worker 自动获得协作提示词，知道如何：
-#    ✅ 查看任务：clawteam task list my-team --owner alice
-#    ✅ 更新状态：clawteam task update my-team <id> --status completed
-#    ✅ 汇报 Leader：clawteam inbox send my-team leader "完成！"
-
-# 4. 观看 Agent 协同工作
-clawteam board attach my-team
+RUN_ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$RUN_JSON")
 ```
 
-### 🧭 我到底该用哪条 spawn 命令？
-
-通用格式是 `clawteam spawn [backend] [command] ...`。`command` 要填你机器上本来就能工作的 agent CLI：
+提交带显式 feature block 的 backlog：
 
 ```bash
-# Claude Code
-clawteam spawn tmux claude --team my-team --agent-name alice --task "实现 OAuth2"
+PLAN_JSON=$(uv run branchclaw --json planner propose "$RUN_ID" "$(cat <<'EOF'
+## Feature: Hero Polish
+Goal: Improve the homepage hero treatment.
+Task: Update hero copy and layout.
+Areas: ui, hero
+Priority: 10
 
-# Codex
-clawteam spawn tmux codex --team my-team --agent-name bob --task "编写前端测试"
+## Feature: API Health
+Goal: Add a backend health endpoint.
+Task: Implement a lightweight health check.
+Areas: api
+Priority: 20
+EOF
+)" --summary "initial backlog" --author planner)
 
-# nanobot
-clawteam spawn tmux nanobot --team my-team --agent-name carol --task "构建 API"
+PLAN_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["gateId"])' <<< "$PLAN_JSON")
+uv run branchclaw planner approve "$RUN_ID" "$PLAN_GATE" --actor reviewer
 ```
 
-说明：
-
-- `tmux` 是默认 backend，适合需要保留交互式 TUI、并且想直接观察 agent 工作过程的场景。
-- `subprocess` 更适合一次性工具或非交互脚本。
-- `nanobot` 在 ClawTeam 内部会自动规范化为 `nanobot agent`，上面的写法就是正确入口。
-- Claude Code 和 Codex 在全新 worktree 里的 trust prompt，tmux backend 会自动确认。
-
-### 🔌 接入别的 Agent 要满足什么？
-
-除了 Claude Code、Codex、nanobot 之外，ClawTeam 也能接别的 CLI agent，但至少要满足这几个条件：
-
-1. 命令在 `PATH` 里能找到，并且脱离 ClawTeam 也能正常启动。
-2. 能在指定工作目录或 git worktree 里运行。
-3. 能接收初始任务，方式可以是命令行参数，也可以是交互输入。
-4. 如果是交互式 agent，启动后不能立刻退出，得能留在 `tmux` 里。
-
-如果你不确定一个 agent 是否兼容，先这样测：
+观察 run：
 
 ```bash
-clawteam spawn subprocess <your-agent> --team my-team --agent-name test --task "Say OK"
+uv run branchclaw run show "$RUN_ID"
+uv run branchclaw feature list "$RUN_ID"
+uv run branchclaw batch list "$RUN_ID"
+uv run branchclaw worker list "$RUN_ID"
+uv run branchclaw board serve
 ```
 
-这条能跑通，再切到 `tmux` 做交互式监控。
+评审并 promote：
 
-### 🤖 支持的 Agent
+```bash
+uv run branchclaw run merge-request "$RUN_ID" --batch-id <batch-id> --actor reviewer
+uv run branchclaw run promote-request "$RUN_ID" --batch-id <batch-id> --actor reviewer
+```
 
-下表中的命令都默认对应 CLI 已经能在你的机器上独立运行。
+更完整的操作说明见：
 
-| Agent | 启动命令 | 状态 |
-|-------|---------|------|
-| [Claude Code](https://claude.ai/claude-code) | `clawteam spawn tmux claude --team ...` | ✅ 完全支持 |
-| [Codex](https://openai.com/codex) | `clawteam spawn tmux codex --team ...` | ✅ 完全支持 |
-| [OpenClaw](https://github.com/openclaw/openclaw) | `clawteam spawn tmux openclaw --team ...` | ✅ 完全支持 |
-| [nanobot](https://github.com/HKUDS/nanobot) | `clawteam spawn tmux nanobot --team ...` | ✅ 完全支持 |
-| [Cursor](https://cursor.com) | `clawteam spawn subprocess cursor --team ...` | 🔮 实验性 |
-| 自定义脚本 | `clawteam spawn subprocess python --team ...` | ✅ 完全支持 |
+- [docs/branchclaw-concepts.md](docs/branchclaw-concepts.md)
+- [docs/branchclaw-runbook.md](docs/branchclaw-runbook.md)
+- [docs/branchclaw-manual-e2e-threejs.md](docs/branchclaw-manual-e2e-threejs.md)
 
 ---
 
-## ✨ 功能特性
+## 🎬 使用场景
 
-<table>
-<tr>
-<td width="50%" valign="top">
+### 🌐 1. 长期产品仓库
 
-### 🦞 Agent 自组织
-- Leader Agent 创建和管理 Worker Agent
-- **自动注入协作提示词** —— 零配置
-- Worker 自主汇报状态、结果和空闲状态
-- 支持任意 CLI Agent
+给 BranchClaw 一个产品方向，比如“优化 onboarding”或“继续迭代 landing page”。planner 会维护
+feature queue，daemon 会自动派发不冲突的 worktree，而你评审的是 batch，不是逐个 micromanage worker。
 
-### 🌳 工作区隔离
-- 每个 Agent 独立 **Git Worktree**（独立分支）
-- 并行 Agent 之间零冲突
-- 检查点、合并、清理命令
+### 🎨 2. Web / Full-stack 视觉迭代
 
-### 📋 带依赖的任务跟踪
-- 共享看板：`pending` → `in_progress` → `completed` / `blocked`
-- `--blocked-by` 依赖链 —— **完成时自动解除阻塞**
-- `task wait` 阻塞直到全部完成
+对于 web 和 full-stack 仓库，worker 可以使用 project profile、启动真实预览服务、上报结构化 UI 结果，
+并把 preview 直接显示在 dashboard review 流中。仓库里的 Three.js manual E2E runbook 就是专门验证这条路径。
 
-</td>
-<td width="50%" valign="top">
+### 🧪 3. 人工在环的发布列车
 
-### 💬 Agent 间通信
-- 点对点**收件箱**（发送、接收、预览）
-- **广播**给所有团队成员
-- 文件传输（默认）或 ZeroMQ P2P 传输（含离线回退）
-
-### 📊 监控面板
-- `board show` — 终端看板
-- `board live` — 自动刷新
-- `board attach` — **tmux 平铺视图**
-- `board serve` — **Web UI 实时仪表板**
-
-### 🎪 团队模板
-- **TOML 文件**定义团队原型（角色、任务、提示词）
-- 一条命令启动完整团队：`clawteam launch <template>`
-- 内置：AI 对冲基金（7 Agent），可自定义
-
-</td>
-</tr>
-</table>
+如果你希望关键步骤都由人工审批，可以把 plan、archive、merge-to-integration 和 promote 分成独立 gate。
+BranchClaw 负责维持队列推进，而最终判断仍由操作者做出。
 
 ---
 
-## 🗺️ 发展路线
+## 📚 文档
 
-| 阶段 | 版本 | 内容 | 状态 |
-|------|------|------|------|
-| **当前** | v0.3 | 文件传输 + P2P (ZeroMQ) + Web UI + 多用户 + 团队模板 | ✅ 已完成 |
-| **Phase 1** | v0.4 | Redis Transport —— 跨机器消息通信 | 🔜 计划中 |
-| **Phase 2** | v0.5 | 共享状态层 —— 团队配置和任务也跨机器 | 🔜 计划中 |
-| **Phase 3** | v0.6 | Agent 市场 —— 发现和复用社区 Agent 模板 | 💡 规划中 |
-| **Phase 4** | v0.7 | 自适应调度 —— 根据 Agent 性能动态调整任务分配 | 💡 规划中 |
-| **Phase 5** | v1.0 | 生产级稳定版 —— 认证、权限、审计日志 | 💡 规划中 |
+- [docs/branchclaw-concepts.md](docs/branchclaw-concepts.md)：当前产品的核心名词与生命周期
+- [docs/branchclaw-runbook.md](docs/branchclaw-runbook.md)：CLI-first 的操作者工作流
+- [docs/branchclaw-manual-e2e-threejs.md](docs/branchclaw-manual-e2e-threejs.md)：真实 Three.js 项目的人在环流程
+- [docs/index.html](docs/index.html)：文档入口页
 
----
+legacy `clawteam` 仍为兼容保留。你可以用下面的命令把旧 team 导入 BranchClaw：
 
-## 📖 致谢
+```bash
+uv run branchclaw run migrate-clawteam <team-name> --repo /path/to/repo
+```
 
-- [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — 8 Agent 群体实验的基础框架
-- [Claude Code](https://claude.ai/claude-code) 和 [Codex](https://openai.com/codex) — 作为 ClawTeam 团队成员的 AI 编程 Agent
-- [ai-hedge-fund](https://github.com/virattt/ai-hedge-fund) — AI 对冲基金模板的灵感来源
-- [CLI-Anything](https://github.com/HKUDS/CLI-Anything) — 姊妹项目，让所有软件都能被 Agent 使用
+如果要跑 live acceptance：
 
-## ⭐ Star History
-
-如果 ClawTeam 帮助你的 AI Agent 协同工作，给我们一个 star ⭐
-
-<div align="center">
-  <a href="https://star-history.com/#HKUDS/ClawTeam&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HKUDS/ClawTeam&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HKUDS/ClawTeam&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=HKUDS/ClawTeam&type=Date" />
-    </picture>
-  </a>
-</div>
-
----
-
-## 📄 开源协议
-
-MIT
-
----
-
-<div align="center">
-
-**ClawTeam** — *Agent 群体智能* 🦞
-
-<sub>8 Agent × 8 H100 × 2430 实验 × 一个 CLI × 一个群体</sub>
-
-<br>
-
-<img src="assets/icon.png" alt="ClawTeam" width="80">
-
-</div>
-
-<p align="center">
-  <em>感谢访问 ✨ ClawTeam！</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.ClawTeam&style=for-the-badge&color=00d4ff" alt="Views">
-</p>
+```bash
+uv run python scripts/live_claude_acceptance.py --target both
+```

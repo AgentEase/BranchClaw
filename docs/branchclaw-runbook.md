@@ -1,14 +1,22 @@
 # BranchClaw Operator Runbook
 
-This runbook is for the current `branchclaw` product surface in this repository. It assumes a single-container, Git-first workflow with one planner orchestrating isolated CLI workers.
+This runbook describes the current BranchClaw product model:
 
-If you are running directly from the repository, prefix commands with `uv run`. If you installed the package already, use `branchclaw` directly.
+- one repository
+- one long-lived run
+- one planner-owned feature backlog
+- one worktree per active worker
+- batch review before merge
+- integration branch before promote
+
+If you are running directly from this repository, prefix commands with `uv run`. If `branchclaw`
+is already installed globally, you can omit `uv run`.
 
 ## Preconditions
 
 - Python 3.10+
 - a Git repository to operate on
-- `tmux` if you want interactive worker sessions
+- `tmux` for interactive worker sessions
 - a CLI agent such as `claude`, `codex`, or another supported command
 
 Recommended repo-local setup:
@@ -19,27 +27,43 @@ uv run branchclaw --help
 uv run branchclaw daemon start
 ```
 
-Installed command map:
+Useful command families:
 
 - `branchclaw daemon start|stop|status|ps`
-- `branchclaw run create`
-- `branchclaw planner propose`
-- `branchclaw worker spawn`
-- `branchclaw constraint add`
-- `branchclaw archive create`
+- `branchclaw run create|show|list|merge-request|promote-request|migrate-clawteam`
+- `branchclaw planner propose|approve|reject|resume`
+- `branchclaw worker spawn|list|checkpoint|stop|restart|report|reconcile`
+- `branchclaw feature list|show`
+- `branchclaw batch list|show`
+- `branchclaw archive create|list`
 - `branchclaw archive restore`
-- `branchclaw event export`
-- `branchclaw run migrate-clawteam`
+- `branchclaw constraint add`
+- `branchclaw event export|tail`
+- `branchclaw board show|serve`
 
-## 1. Create a Run
+## 1. Start the Daemon
 
-Create the control-plane record, store the shared spec/rules, and pin the target repository:
+Process-managing commands require the explicit global daemon:
+
+```bash
+uv run branchclaw daemon start
+uv run branchclaw daemon status
+uv run branchclaw daemon ps
+```
+
+## 2. Create a Long-Lived Run
+
+Create one run for one repository and one current direction:
 
 ```bash
 RUN_JSON=$(uv run branchclaw --json run create demo \
   --repo . \
-  --spec "Ship feature X with reviewable commits" \
-  --rules "Keep changes focused and explain blockers early")
+  --project-profile web \
+  --direction "Improve onboarding and keep shipping reviewable batches" \
+  --integration-ref branchclaw/demo/integration \
+  --max-active-features 2 \
+  --spec "Continuously ship isolated, reviewable improvements." \
+  --rules "Keep the build healthy, keep claims explicit, and report blockers early.")
 
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$RUN_JSON")
 echo "$RUN_ID"
@@ -51,132 +75,169 @@ Inspect the initial projection:
 uv run branchclaw run show "$RUN_ID"
 ```
 
-## 2. Propose and Approve a Plan
+## 3. Propose a Backlog and Approve It
 
-Planner output always goes through a gate:
+Planner approval now defines direction and current backlog, not just a one-shot execution bundle.
+
+Example with explicit feature blocks:
 
 ```bash
-PLAN_JSON=$(uv run branchclaw --json planner propose "$RUN_ID" \
-  "Worker A implements the API. Worker B adds tests and docs." \
-  --summary "phase 1")
+PLAN_JSON=$(uv run branchclaw --json planner propose "$RUN_ID" "$(cat <<'EOF'
+## Feature: Hero Polish
+Goal: Improve the homepage hero treatment.
+Task: Update hero copy and layout.
+Areas: ui, hero
+Priority: 10
+
+## Feature: API Health
+Goal: Add a backend health endpoint.
+Task: Implement a lightweight health check.
+Areas: api
+Priority: 20
+EOF
+)" --summary "initial backlog" --author planner)
 
 PLAN_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["gateId"])' <<< "$PLAN_JSON")
 uv run branchclaw planner approve "$RUN_ID" "$PLAN_GATE" --actor reviewer
 ```
 
-Recompile the current execution bundle at any time:
+Recompile the active bundle at any time:
 
 ```bash
 uv run branchclaw planner resume "$RUN_ID"
 ```
 
-## 3. Spawn Workers
+## 4. Observe Planner Dispatch
 
-Process-managing commands require the explicit global daemon. Start it once per host session:
+After plan approval, the daemon can auto-dispatch non-conflicting features up to the configured
+concurrency limit.
 
-```bash
-uv run branchclaw daemon start
-uv run branchclaw daemon status
-```
-
-Each worker gets its own Git worktree, branch, runtime status file, and process:
+Inspect the current state:
 
 ```bash
-uv run branchclaw worker spawn "$RUN_ID" worker-a \
-  --backend tmux \
-  --task "Implement the API" \
-  --skip-permissions \
-  claude
-
-uv run branchclaw worker spawn "$RUN_ID" worker-b \
-  --backend tmux \
-  --task "Add tests and update docs" \
-  --skip-permissions \
-  claude
-```
-
-Useful runtime inspection commands:
-
-```bash
-uv run branchclaw worker list "$RUN_ID"
 uv run branchclaw run show "$RUN_ID"
+uv run branchclaw feature list "$RUN_ID"
+uv run branchclaw batch list "$RUN_ID"
+uv run branchclaw worker list "$RUN_ID"
 uv run branchclaw board show "$RUN_ID"
 ```
 
-## 4. Observe the Run
-
-Terminal view:
-
-```bash
-uv run branchclaw board show "$RUN_ID"
-```
-
-Web board:
+Open the daemon-resident dashboard:
 
 ```bash
 uv run branchclaw board serve
 ```
 
-`board serve` now returns the daemon-resident dashboard URL. The dashboard exposes:
+The dashboard is now organized around:
 
-- `/api/runs` for run selection
-- `/api/daemon/status` for daemon health and dashboard bind info
-- `/api/processes` for managed process state
-- `/api/data-dirs` for tracked data-dir summaries
-- `/api/data-dirs/<dataDirKey>/runs/<run-id>` for the scoped projection snapshot
-- `/api/data-dirs/<dataDirKey>/events/<run-id>` for SSE updates
+- `Picker`
+- `Workspace`
+- `Review`
+- `Control Plane`
 
-Event inspection:
+## 5. Manual Worker Override
+
+Automatic dispatch is the default, but you can still manually create a worktree/worker.
+
+Spawn a worker without binding to a feature:
 
 ```bash
-uv run branchclaw event tail "$RUN_ID" --follow
-uv run branchclaw event export "$RUN_ID" --out branchclaw-run.json
+uv run branchclaw worker spawn "$RUN_ID" worker-a \
+  --backend tmux \
+  --task "Investigate the onboarding flow" \
+  --skip-permissions \
+  claude
 ```
 
-Managed process inspection:
+Or override a specific feature:
 
 ```bash
-uv run branchclaw daemon ps
+uv run branchclaw worker spawn "$RUN_ID" worker-a \
+  --feature-id feature-001 \
+  --backend tmux \
+  --task "Implement the planned hero polish" \
+  --skip-permissions \
+  claude
 ```
 
-## 5. Add Constraints and Handle Dirty Replan
-
-Constraints are append-only patches. Adding one marks the run dirty and blocks forward gated actions until a new plan is approved.
+Checkpoint a branch-local commit when useful:
 
 ```bash
-uv run branchclaw constraint add "$RUN_ID" "Do not force-push worker branches"
+uv run branchclaw worker checkpoint "$RUN_ID" worker-a --message "checkpoint before review"
+```
+
+## 6. Constraints and Dirty Replan
+
+Constraints are append-only patches. Adding one marks the run dirty and blocks forward gated
+actions until a fresh plan is approved.
+
+```bash
+uv run branchclaw constraint add "$RUN_ID" "Do not change the signup copy without design review"
 uv run branchclaw planner resume "$RUN_ID"
 
 REPLAN_JSON=$(uv run branchclaw --json planner propose "$RUN_ID" \
-  "Updated plan after the new constraint" \
+  "Updated backlog after the new constraint" \
   --summary "constraint replan")
 
 REPLAN_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["gateId"])' <<< "$REPLAN_JSON")
 uv run branchclaw planner approve "$RUN_ID" "$REPLAN_GATE" --actor reviewer
 ```
 
-## 6. Stop and Reconcile Workers
+## 7. Runtime Recovery, Interventions, and Reconcile
 
-Before archive/merge/restore transitions, stop live workers and reconcile runtime state:
+BranchClaw has a rescue loop. When retries and auto-remediation are exhausted, it opens an
+intervention instead of silently leaving a broken worker running.
+
+Useful commands:
 
 ```bash
-uv run branchclaw worker stop "$RUN_ID" worker-a
-uv run branchclaw worker stop "$RUN_ID" worker-b
+uv run branchclaw worker list "$RUN_ID"
 uv run branchclaw worker reconcile "$RUN_ID"
+uv run branchclaw worker restart "$RUN_ID" worker-a
+uv run branchclaw event tail "$RUN_ID" --follow
 ```
 
-Checkpoint a worker branch before stopping if you want a branch-local commit:
+Export the event stream without heartbeat noise by default:
 
 ```bash
-uv run branchclaw worker checkpoint "$RUN_ID" worker-a --message "checkpoint before archive"
+uv run branchclaw event export "$RUN_ID" --out branchclaw-run.json
 ```
 
-## 7. Archive, Restore, and Merge
+## 8. Review Features and Batches
+
+The product review boundary is now the batch, not the raw worker result.
+
+Inspect current backlog and reviewable batches:
+
+```bash
+uv run branchclaw feature list "$RUN_ID"
+uv run branchclaw batch list "$RUN_ID"
+uv run branchclaw batch show "$RUN_ID" <batch-id>
+```
+
+Ready features can be grouped into a batch. Batch merge goes to `integration_ref` first:
+
+```bash
+uv run branchclaw run merge-request "$RUN_ID" --batch-id <batch-id> --actor reviewer
+```
+
+If integration validation passes, request promote to the main branch:
+
+```bash
+uv run branchclaw run promote-request "$RUN_ID" --batch-id <batch-id> --actor reviewer
+```
+
+If integration validation fails, BranchClaw keeps the batch out of main and sends the affected
+features back to `ready` with blockers.
+
+## 9. Archive and Restore Worktrees
+
+`archive/restore` still matters, but now mainly as worktree recovery and feature snapshot tooling.
 
 Create an archive request:
 
 ```bash
-ARCHIVE_JSON=$(uv run branchclaw --json archive create "$RUN_ID" --label phase-1)
+ARCHIVE_JSON=$(uv run branchclaw --json archive create "$RUN_ID" --label feature-review-01)
 ARCHIVE_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["gateId"])' <<< "$ARCHIVE_JSON")
 ARCHIVE_ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["archiveId"])' <<< "$ARCHIVE_JSON")
 
@@ -184,7 +245,7 @@ uv run branchclaw planner approve "$RUN_ID" "$ARCHIVE_GATE" --actor reviewer
 uv run branchclaw archive list "$RUN_ID"
 ```
 
-Request a restore:
+Restore an archive back into a new worktree state:
 
 ```bash
 RESTORE_JSON=$(uv run branchclaw --json archive restore "$RUN_ID" "$ARCHIVE_ID" --actor reviewer)
@@ -192,54 +253,42 @@ RESTORE_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <
 uv run branchclaw planner approve "$RUN_ID" "$RESTORE_GATE" --actor reviewer
 ```
 
-Request a merge promotion from an approved archive:
+## 10. Stop Workers Cleanly
+
+Before archive-heavy transitions or manual maintenance, stop and reconcile live workers:
 
 ```bash
-MERGE_JSON=$(uv run branchclaw --json run merge-request "$RUN_ID" --archive-id "$ARCHIVE_ID" --actor reviewer)
-MERGE_GATE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$MERGE_JSON")
-uv run branchclaw planner approve "$RUN_ID" "$MERGE_GATE" --actor reviewer
+uv run branchclaw worker stop "$RUN_ID" worker-a
+uv run branchclaw worker reconcile "$RUN_ID"
 ```
 
-If a merge conflicts, the run enters `merge_blocked` and stays observable through the same board/event surfaces.
+Dashboard `Stop` should now also close the worker-owned preview service, not just the runtime
+record.
 
-## 8. Import Legacy ClawTeam State
+## 11. Migrate Legacy ClawTeam State
 
-You can import an old team as a new BranchClaw run:
+You can import an old team into BranchClaw:
 
 ```bash
 uv run branchclaw run migrate-clawteam <team-name> --repo /path/to/repo
 ```
 
-Use this when you want to keep old task/message artifacts but move future work into the BranchClaw control plane.
+Use this when you want to preserve old team/task artifacts but move future work into the current
+run/feature/batch model.
 
-## 9. Live Claude Acceptance
+## 12. Acceptance and Manual E2E
 
-Run the manual live acceptance harness:
+Live acceptance harness:
 
 ```bash
 uv run python scripts/live_claude_acceptance.py --target both
 ```
 
-Behavior:
-
-- BranchClaw and ClawTeam data live in isolated temporary directories during the run
-- the host `HOME` is preserved so Claude Code reuses your existing login and local config
-- artifacts are written to `artifacts/live-claude/<timestamp>/`
-- the top-level result is written to `artifacts/live-claude/<timestamp>/summary.md`
-
-The harness validates:
-
-- `branchclaw` planner, worker spawn, constraint dirty replan, archive, and restore flow
-- legacy `clawteam` interactive spawn, board, inbox/task activity, and worktree isolation
-
-## 10. Manual Three.js Long-Run
-
-For a one-shot manual human-in-the-loop real-project run where you approve every gate yourself,
-use:
+Manual human-in-the-loop real-project runbook:
 
 - [docs/branchclaw-manual-e2e-threejs.md](docs/branchclaw-manual-e2e-threejs.md)
 
-For a real visual-iteration run against a public React Three Fiber portfolio:
+Smoke long-run against the public Three.js repository:
 
 ```bash
 uv run python scripts/manual_threejs_longrun.py --smoke
@@ -248,30 +297,3 @@ uv run python scripts/manual_threejs_longrun.py --smoke
 Default target repository:
 
 - `https://github.com/sanidhyy/threejs-portfolio.git`
-
-Default long-run behavior:
-
-- `project_profile=web`
-- one long-lived BranchClaw run
-- two parallel Claude workers
-- fixed Vite ports `4173` and `4174`
-- no automatic merge to upstream `main`
-- artifacts under `artifacts/manual-threejs/<timestamp>/`
-
-The harness also creates a local `longrun/integration` branch inside the isolated clone so each
-approved archive can seed the next iteration without touching the upstream repository.
-
-## Current Product Boundaries
-
-BranchClaw currently focuses on:
-
-- planner-driven runs
-- worker runtime isolation
-- event projection and board observability
-- archive/restore/merge lifecycle
-
-It does not currently replace:
-
-- legacy `clawteam team/task/inbox` collaboration semantics
-- multi-host transport or distributed orchestration
-- heavy frontend infrastructure for the board

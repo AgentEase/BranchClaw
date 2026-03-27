@@ -1,4 +1,8 @@
-# Transport 抽象层 — 架构图 & 时序图
+# Legacy ClawTeam Transport 抽象层 — 架构图 & 时序图
+
+> This document describes the legacy `clawteam` transport subsystem that still ships in this
+> repository for compatibility and migration. It is not the primary BranchClaw runtime model.
+> BranchClaw's current product loop centers on `Run -> Worktree -> Feature -> Batch`.
 
 ## 1. 整体架构图
 

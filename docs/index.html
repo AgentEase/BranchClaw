@@ -3,57 +3,263 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClawTeam — Agent Swarm Intelligence</title>
+  <title>BranchClaw Docs</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; background: #fafafa; line-height: 1.6; }
-    h1 { font-size: 2em; margin-bottom: 0.2em; }
-    .subtitle { color: #666; font-size: 1.1em; margin-bottom: 2em; }
-    .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 24px; margin-bottom: 16px; transition: box-shadow 0.2s; }
-    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .card-title { font-size: 1.3em; font-weight: 600; color: #1a1a2e; text-decoration: none; }
-    .card-title:hover { color: #4a6cf7; }
-    .card-desc { color: #555; margin-top: 8px; }
-    .card-meta { margin-top: 12px; font-size: 0.85em; color: #888; }
-    .card-meta a { color: #4a6cf7; text-decoration: none; }
-    .card-meta a:hover { text-decoration: underline; }
-    .install-box { background: #1a1a2e; color: #e0e0e0; border-radius: 8px; padding: 14px 18px; font-family: monospace; font-size: 0.95em; margin-top: 12px; }
-    .install-box code { color: #7dd3fc; }
-    h2 { font-size: 1.4em; margin-top: 2em; margin-bottom: 0.8em; }
-    footer { margin-top: 3em; padding-top: 1.5em; border-top: 1px solid #e0e0e0; color: #999; font-size: 0.85em; }
-    footer a { color: #4a6cf7; text-decoration: none; }
+    :root {
+      color-scheme: light;
+      --bg: #f6faf8;
+      --panel: #ffffff;
+      --text: #14221c;
+      --muted: #557267;
+      --border: #d8e6df;
+      --accent: #0f766e;
+      --accent-soft: #e4f4f1;
+      --shadow: 0 16px 40px rgba(15, 118, 110, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
+        linear-gradient(180deg, #fbfdfc 0%, var(--bg) 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .shell {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 64px;
+    }
+    .hero {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(216, 230, 223, 0.9);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 16px 0 8px;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+    .subtitle {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      margin: 0 0 20px;
+    }
+    .install {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: #10231f;
+      color: #eafffb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+    .card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a,
+    .primary-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      background: #fff;
+      font-weight: 600;
+    }
+    .primary-link {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .section-title {
+      margin: 36px 0 14px;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+    .doc-list {
+      display: grid;
+      gap: 14px;
+    }
+    .doc-item {
+      display: grid;
+      grid-template-columns: 1.2fr 2fr auto;
+      gap: 18px;
+      align-items: start;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .doc-item strong {
+      display: block;
+      font-size: 1.03rem;
+    }
+    .doc-item .path {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .doc-item {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>ClawTeam</h1>
-  <p class="subtitle">Agent Swarm Intelligence — let AI agents orchestrate themselves.</p>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">BranchClaw Docs</div>
+      <h1>Git-first agent workspace for long-lived software iteration</h1>
+      <p class="subtitle">
+        BranchClaw centers one repository around a long-lived run, planner-owned feature backlog,
+        isolated Git worktrees, reviewable batches, and a separate integration branch before
+        promotion to main.
+      </p>
+      <div class="install">uv run branchclaw daemon start</div>
+      <div class="links" style="margin-top:16px">
+        <a class="primary-link" href="../README.md">Open README</a>
+        <a href="../README_CN.md">中文 README</a>
+        <a href="branchclaw-concepts.md">Concepts</a>
+        <a href="branchclaw-runbook.md">Operator Runbook</a>
+      </div>
+    </section>
 
-  <h2>Install</h2>
-  <div class="install-box">
-    <code>pip install clawteam</code>
-  </div>
+    <div class="grid">
+      <section class="card">
+        <h2>Product Loop</h2>
+        <p>
+          Pick a workdir, open a run, let the planner maintain feature backlog, review the worktree
+          graph, approve batch merge to <code>integration_ref</code>, then promote separately.
+        </p>
+        <div class="links">
+          <a href="branchclaw-concepts.md">Understand the nouns</a>
+          <a href="branchclaw-runbook.md">Run the workflow</a>
+        </div>
+      </section>
 
-  <h2>Agent Skills</h2>
-  <div class="card">
-    <a class="card-title" href="skills/clawteam/SKILL.md">ClawTeam Multi-Agent Coordination</a>
-    <p class="card-desc">
-      Orchestrate multiple AI agents as a team — spawn sub-agents, assign tasks with dependency chains,
-      send messages, and monitor progress on a kanban board. Works with any CLI agent.
-    </p>
-    <div class="install-box">
-      <code>npx skills add HKUDS/ClawTeam</code>
+      <section class="card">
+        <h2>Human-in-the-Loop</h2>
+        <p>
+          If you want every important gate to stay manual, use the dedicated Three.js E2E runbook
+          and keep plan, archive, merge-to-integration, and promote under explicit approval.
+        </p>
+        <div class="links">
+          <a href="branchclaw-manual-e2e-threejs.md">Manual Three.js E2E</a>
+        </div>
+      </section>
     </div>
-    <div class="card-meta">
-      <a href="skills/clawteam/SKILL.md">SKILL.md</a> &middot;
-      <a href="skills/clawteam/references/cli-reference.md">CLI Reference</a> &middot;
-      <a href="skills/clawteam/references/workflows.md">Workflows</a> &middot;
-      <a href="https://pypi.org/project/clawteam/">PyPI</a>
-    </div>
-  </div>
 
-  <footer>
-    <a href="https://github.com/HKUDS/ClawTeam">GitHub</a> &middot;
-    <a href="https://github.com/HKUDS">HKUDS</a> &middot;
-    Powered by <a href="https://agentskills.io">Agent Skills</a> open standard
-  </footer>
+    <h2 class="section-title">Documentation</h2>
+    <div class="doc-list">
+      <article class="doc-item">
+        <div>
+          <strong>README</strong>
+          <div class="path">README.md / README_CN.md</div>
+        </div>
+        <div>High-level product overview, quick start, feature table, and migration stance.</div>
+        <a class="primary-link" href="../README.md">Open</a>
+      </article>
+
+      <article class="doc-item">
+        <div>
+          <strong>BranchClaw Concepts</strong>
+          <div class="path">docs/branchclaw-concepts.md</div>
+        </div>
+        <div>Core nouns: workdir, run, worktree, feature, batch, integration_ref, decisions, and interventions.</div>
+        <a class="primary-link" href="branchclaw-concepts.md">Open</a>
+      </article>
+
+      <article class="doc-item">
+        <div>
+          <strong>Operator Runbook</strong>
+          <div class="path">docs/branchclaw-runbook.md</div>
+        </div>
+        <div>CLI-first operational workflow from daemon start and run creation to batch merge, promote, archive, and restore.</div>
+        <a class="primary-link" href="branchclaw-runbook.md">Open</a>
+      </article>
+
+      <article class="doc-item">
+        <div>
+          <strong>Manual Three.js E2E</strong>
+          <div class="path">docs/branchclaw-manual-e2e-threejs.md</div>
+        </div>
+        <div>Manual human-in-the-loop validation on a real public Three.js repository with explicit approvals.</div>
+        <a class="primary-link" href="branchclaw-manual-e2e-threejs.md">Open</a>
+      </article>
+
+      <article class="doc-item">
+        <div>
+          <strong>Legacy ClawTeam Transport Architecture</strong>
+          <div class="path">docs/transport-architecture.md</div>
+        </div>
+        <div>Historical and compatibility reference for the legacy ClawTeam transport subsystem that still ships in this repository.</div>
+        <a class="primary-link" href="transport-architecture.md">Open</a>
+      </article>
+    </div>
+
+    <footer>
+      BranchClaw is the default product direction of this repository. Legacy <code>clawteam</code>
+      remains available for compatibility and migration.
+    </footer>
+  </div>
 </body>
 </html>
